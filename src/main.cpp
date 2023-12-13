@@ -11,7 +11,7 @@
 #include "Configuration.h"
 #include "WiFiHandler.h"
 #include "WebClientHandler.h"
-#include "DataSpaceApi.h"
+#include "DataSpaceList.h"
 #include "TimeHandler.h"
 #include "DataStructure.h"
 #include <vector>
@@ -41,7 +41,7 @@ void setup() {
     Serial.println();
     WiFiHandler::initWifi();
     TimeHandler::initTime();
-    DataSpaceApi &DataofSpaceApi = DataSpaceApi::getInstance();
+    DataSpaceList &DataofSpaceApi = DataSpaceList::getInstance();
 
     #ifdef RGB_BUILTIN
       digitalWrite(RGB_BUILTIN, LOW);    // Turn the RGB LED off. Turn onboard LED off. HIGH to turn on
@@ -55,7 +55,7 @@ unsigned long last = 0;
 
 void loop() {
 
-    DataSpaceApi &DataofSpaceApi = DataSpaceApi::getInstance();
+    DataSpaceList &DataofSpaceApi = DataSpaceList::getInstance();
     WebClientHandler &WebHandlerobj= WebClientHandler::getInstance();
 
     unsigned long currentSeconds = millis() / 1000;

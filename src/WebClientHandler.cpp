@@ -22,7 +22,7 @@ void WebClientHandler::modifyStatus( std::vector<SpaceStatusList> &spaStaVector,
 
 
 std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(String webpageout, unsigned long currentSeconds) {
-    DataSpaceApi &SpaceApiBase = DataSpaceApi::getInstance();
+    DataSpaceList &SpaceBase = DataSpaceList::getInstance();
 
     std::vector<SpaceStatusList> spaceStatusVector = {};
     int spaceledNr;
@@ -68,7 +68,7 @@ std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(String webpageout,
 
               // if space is in known_spaces, update status
               spaceName = doc["space"].as<String>();
-              spaceledNr = SpaceApiBase.getLEDforName(spaceName);
+              spaceledNr = SpaceBase.getLEDforName(spaceName);
               currentSpaceStatus = doc["state"]["open"].as<String>();
 
                 if (-1 < spaceledNr) {

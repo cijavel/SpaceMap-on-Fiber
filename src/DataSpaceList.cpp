@@ -1,4 +1,4 @@
-#include "DataSpaceApi.h"
+#include "DataSpaceList.h"
 
 
 SpaceSearchList searchList[] = {
@@ -60,7 +60,7 @@ SpaceSearchList searchList[] = {
     { 55, "not in api: liege hackspace"       }
 };
 
-int DataSpaceApi::getLEDforName(String name) {
+int DataSpaceList::getLEDforName(String name) {
     int result = -1;
     for (const auto& item : searchList) {
         if (item.getName() == name) {
