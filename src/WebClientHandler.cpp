@@ -21,10 +21,9 @@ void WebClientHandler::modifyStatus( std::vector<SpaceStatusList> &spaStaVector,
 }  
 
 
-std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(String webpageout, unsigned long currentSeconds) {
+std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList> &spaceStatusVector,String webpageout, unsigned long currentSeconds) {
     DataSpaceList &SpaceBase = DataSpaceList::getInstance();
 
-    std::vector<SpaceStatusList> spaceStatusVector = {};
     int spaceledNr;
     String spaceName;
     String currentSpaceStatus;

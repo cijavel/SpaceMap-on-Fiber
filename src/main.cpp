@@ -14,7 +14,10 @@
 #include "DataSpaceList.h"
 #include "TimeHandler.h"
 #include "DataStructure.h"
+#include "NeoPixelLED.h"
 #include <vector>
+#include <NeoPixelBus.h>
+
 
 
 #ifdef DEBUG
@@ -32,7 +35,7 @@ static void PrintRamUsage(unsigned long currentSeconds) {
 }
 #endif
 
-
+std::vector<SpaceStatusList> spacestatus;
 
 
 void setup() {
@@ -41,7 +44,9 @@ void setup() {
     Serial.println();
     WiFiHandler::initWifi();
     TimeHandler::initTime();
-    DataSpaceList &DataofSpaceApi = DataSpaceList::getInstance();
+    NeoPixelLED &NeoLED = NeoPixelLED::getInstance();
+    NeoLED.initLEDs();
+    NeoLED.enumerateLEDs(500);
 
     #ifdef RGB_BUILTIN
       digitalWrite(RGB_BUILTIN, LOW);    // Turn the RGB LED off. Turn onboard LED off. HIGH to turn on
@@ -55,8 +60,9 @@ unsigned long last = 0;
 
 void loop() {
 
-    DataSpaceList &DataofSpaceApi = DataSpaceList::getInstance();
     WebClientHandler &WebHandlerobj= WebClientHandler::getInstance();
+    NeoPixelLED &NeoLED = NeoPixelLED::getInstance();
+
 
     unsigned long currentSeconds = millis() / 1000;
     #ifdef DEBUG
@@ -68,10 +74,13 @@ void loop() {
     #endif
 
 
-        std::vector<SpaceStatusList> spacestatus = WebHandlerobj.getSpaceStatus(F(webpage_SpaceAPI), currentSeconds);
+        spacestatus = WebHandlerobj.getSpaceStatus(spacestatus, F(webpage_SpaceAPI), currentSeconds);
+
+
+        NeoLED.updateLEDs(spacestatus, currentSeconds);
 
         if (currentSeconds % interval_in_Seconds_Json == 0){    
-                    Serial.println("MAIN: Returned Sensor Data:");
+                    Serial.println("MAIN - Space Status:");
                         for (const auto& data : spacestatus) {
 
                             Serial.print("led: ");
@@ -85,6 +94,8 @@ void loop() {
                         }
 
         }
+
+
 
 
 }
