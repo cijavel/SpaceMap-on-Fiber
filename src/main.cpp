@@ -5,9 +5,6 @@
 // ---------------
 // DATA -> 4
 
-// https://stackoverflow.com/questions/8534526/how-to-initialize-an-array-of-struct-in-c
-
-
 #include <vector>
 #include <NeoPixelBus.h>
 
@@ -19,7 +16,6 @@
 #include "DataStructure.h"
 #include "NeoPixelLED.h"
 #include "WebServerHandler.h"
-
 
 
 #ifdef DEBUG
@@ -38,8 +34,11 @@ static void PrintRamUsage(unsigned long currentSeconds) {
 #endif
 
 std::vector<SpaceStatusList> spacestatus;
+unsigned long last = 0;
 
-
+// --------------------------------------------------------------------------
+// SETUP
+// --------------------------------------------------------------------------
 void setup() {
     delay(100);
     Serial.begin(BAUDRATE);
@@ -54,14 +53,15 @@ void setup() {
 
     #ifdef RGB_BUILTIN
       digitalWrite(RGB_BUILTIN, LOW);    // Turn the RGB LED off. Turn onboard LED off. HIGH to turn on
-      //neopixelWrite(RGB_BUILTIN,5,0,0); // Red
-      //delay(1000);
     #endif
     
 }
 
-unsigned long last = 0;
 
+
+// --------------------------------------------------------------------------
+// LOOP
+// --------------------------------------------------------------------------
 void loop() {
 
     WebClientHandler &WebHandlerobj= WebClientHandler::getInstance();
@@ -76,32 +76,25 @@ void loop() {
             Serial.println(currentSeconds);
             last = currentSeconds;
         }
-    #endif
 
+        if (currentSeconds % interval_in_Seconds_Json == 0){    
+            Serial.println("Space Status:");
+                for (const auto& data : spacestatus) {
+
+                    Serial.print("led: ");
+                    Serial.print(data.getLED());
+                    Serial.print(", name: ");
+                    Serial.print(data.getName());
+                    Serial.print(", status: ");
+                    Serial.print(String(data.getStatus()));
+                    Serial.print(", last: ");
+                    Serial.println(String(data.getlastChange()));
+                }
+        }
+    #endif
 
         spacestatus = WebHandlerobj.getSpaceStatus(spacestatus, F(webpage_SpaceAPI), currentSeconds);
 
-
         NeoLED.updateLEDs(spacestatus, currentSeconds);
         webServer.setData(spacestatus, currentSeconds);
-
-        if (currentSeconds % interval_in_Seconds_Json == 0){    
-                    Serial.println("MAIN - Space Status:");
-                        for (const auto& data : spacestatus) {
-
-                            Serial.print("led: ");
-                            Serial.print(data.getLED());
-                            Serial.print(", name: ");
-                            Serial.print(data.getName());
-                            Serial.print(", status: ");
-                            Serial.print(String(data.getStatus()));
-                            Serial.print(", last: ");
-                            Serial.println(String(data.getlastChange()));
-                        }
-
-        }
-
-
-
-
 }

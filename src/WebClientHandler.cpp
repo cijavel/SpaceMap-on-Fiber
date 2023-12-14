@@ -1,6 +1,8 @@
 #include "WebClientHandler.h"
 
-
+// --------------------------------------------------------------------------
+// add a new Hackerpace to vectore or change the status of an existing hackerspace
+// --------------------------------------------------------------------------
 void WebClientHandler::modifyStatus( std::vector<SpaceStatusList> &spaStaVector, int led, String name, SpaceStatus status) {
 
     bool change = false;
@@ -20,14 +22,15 @@ void WebClientHandler::modifyStatus( std::vector<SpaceStatusList> &spaStaVector,
 
 }  
 
-
+// --------------------------------------------------------------------------
+// download and parse json from spaceAPI. Call to set up status list 
+// --------------------------------------------------------------------------
 std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList> &spaceStatusVector,String webpageout, unsigned long currentSeconds) {
+   
     DataSpaceList &SpaceBase = DataSpaceList::getInstance();
-
     int spaceledNr;
     String spaceName;
     String currentSpaceStatus;
-
     HTTPClient http; 
 
     if (currentSeconds % interval_in_Seconds_Json == 0){
@@ -42,7 +45,6 @@ std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(std::vector<SpaceS
       int httpCode = http.GET();
       Stream& payload = http.getStream();
 
-
       StaticJsonDocument<128> filter;
       filter["url"] = true;
       filter["space"] = true;
@@ -54,8 +56,6 @@ std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(std::vector<SpaceS
       payload.find("["); // should actually be byte 0 of the response stream
       do {
 
-
-
           spaceledNr = -1;
           DeserializationError error = deserializeJson(doc, payload, DeserializationOption::Filter(filter));
           if (error) {
@@ -64,7 +64,6 @@ std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(std::vector<SpaceS
           }
           else
           {
-
               // if space is in known_spaces, update status
               spaceName = doc["space"].as<String>();
               spaceledNr = SpaceBase.getLEDforName(spaceName);

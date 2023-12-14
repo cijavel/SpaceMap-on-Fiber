@@ -5,17 +5,21 @@
 
 static std::vector<SpaceStatusList> dataspacestatus;
 
+// --------------------------------------------------------------------------
+// set up page
+// --------------------------------------------------------------------------
 WebServerHandler::WebServerHandler()
 {
   server.on("/", HTTP_GET, handle_index);
   server.onNotFound(handle_NotFound);
 }
 
+
+// --------------------------------------------------------------------------
+// index webpage
+// --------------------------------------------------------------------------
 void WebServerHandler::handle_index(AsyncWebServerRequest *request)
 {
-
-
-
     String html = "<html><body>";
     html += "<h1>Space Data</h1>";
 
@@ -33,16 +37,18 @@ void WebServerHandler::handle_index(AsyncWebServerRequest *request)
   
 }
 
-
+// --------------------------------------------------------------------------
+// notfound page
+// --------------------------------------------------------------------------
 void WebServerHandler::handle_NotFound(AsyncWebServerRequest *request)
 {
   request->send(404, "text/plain; charset=utf-8", "Not found");
 }
 
+// --------------------------------------------------------------------------
+// set data for the webpage
+// --------------------------------------------------------------------------
 void WebServerHandler::setData(std::vector<SpaceStatusList> &spacestatus, unsigned long currentSeconds){
-
-
-    
     if (currentSeconds % interval_in_Seconds_webserver == 0){  
       if (!spacestatus.empty()) {
         dataspacestatus = spacestatus;
@@ -51,6 +57,9 @@ void WebServerHandler::setData(std::vector<SpaceStatusList> &spacestatus, unsign
 
 }
 
+// --------------------------------------------------------------------------
+// initial webserver
+// --------------------------------------------------------------------------
 void WebServerHandler::start()
 {
   server.begin();

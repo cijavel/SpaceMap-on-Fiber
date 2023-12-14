@@ -2,13 +2,12 @@
 #include "NeoPixelLED.h"
 #include <NeoPixelBus.h>
 
-const uint16_t PixelCount = LED_COUNT; // this example assumes 4 pixels, making it smaller will cause a failure
-const uint8_t PixelPin = LED_DATA_PIN;  // make sure to set this to the correct pin, ignored for Esp8266
-
 // three element pixels, in different order and speeds
 NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(LED_COUNT, LED_DATA_PIN);
 
-
+// --------------------------------------------------------------------------
+// Definition of color
+// --------------------------------------------------------------------------
 RgbColor copen(0,255,0);
 RgbColor cclosed(255,0,0);
 RgbColor cunknown(24,12,128);
@@ -16,7 +15,9 @@ RgbColor cwhite( 255,255,255);
 RgbColor cblack(0);
 
 
-
+// --------------------------------------------------------------------------
+// init Leds
+// --------------------------------------------------------------------------
 void NeoPixelLED::initLEDs() {
     strip.Begin();
     strip.ClearTo(cblack);
@@ -30,23 +31,9 @@ void NeoPixelLED::initLEDs() {
     
  }
 
-bool NeoPixelLED::checknumberofLEDs(std::vector<SpaceStatusList> &spacestatus) {
-    bool b = true;
-    if (spacestatus.size() > LED_COUNT) {
-        b = false;
-        Serial.println("------------------------------");
-        Serial.println("Please add more LEDs !!!!!!!!!");
-        Serial.print("Spaces: ");
-        Serial.println(spacestatus.size());
-        Serial.print("LEDs: ");
-        Serial.println(LED_COUNT);
-        Serial.println("------------------------------");
-    }
-        Serial.print("spaces: ");
-        Serial.println(spacestatus.size());
-    return b;
- }
-
+// --------------------------------------------------------------------------
+// update Hackerspace status on led strip
+// --------------------------------------------------------------------------
 void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus, unsigned long currentSeconds){
 
 
@@ -81,6 +68,9 @@ void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus, unsigned
 
 }
 
+// --------------------------------------------------------------------------
+// led test - initial phase
+// --------------------------------------------------------------------------
 void NeoPixelLED::enumerateLEDs( int delay_time) {
     int i ;
 
@@ -101,6 +91,9 @@ void NeoPixelLED::enumerateLEDs( int delay_time) {
     strip.ClearTo(cblack);
 }
 
+// --------------------------------------------------------------------------
+// set the Brightness of led
+// --------------------------------------------------------------------------
 RgbColor NeoPixelLED::setBrightness(RgbColor color, int brightness) {
   color = RgbColor(
     (color.R * brightness) / 255,
@@ -109,3 +102,23 @@ RgbColor NeoPixelLED::setBrightness(RgbColor color, int brightness) {
   );
   return color;
 }
+
+// --------------------------------------------------------------------------
+// heck, if we got enough leds for all Hackerspace in list
+// --------------------------------------------------------------------------
+bool NeoPixelLED::checknumberofLEDs(std::vector<SpaceStatusList> &spacestatus) {
+    bool b = true;
+    if (spacestatus.size() > LED_COUNT) {
+        b = false;
+        Serial.println("------------------------------");
+        Serial.println("Please add more LEDs !!!!!!!!!");
+        Serial.print("Spaces: ");
+        Serial.println(spacestatus.size());
+        Serial.print("LEDs: ");
+        Serial.println(LED_COUNT);
+        Serial.println("------------------------------");
+    }
+        Serial.print("spaces: ");
+        Serial.println(spacestatus.size());
+    return b;
+ }

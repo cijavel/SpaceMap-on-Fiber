@@ -2,18 +2,23 @@
 
 
 // --------------------------------------------------------------------------
-// time functions
+// time function configuration
 // --------------------------------------------------------------------------
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 0;
 const int   daylightOffset_sec = 3600;
 const String timezone = "CET-1CEST,M3.5.0,M10.5.0/3";
 
-
+// --------------------------------------------------------------------------
+// initial time function
+// --------------------------------------------------------------------------
 void  TimeHandler::initTime() {
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 }
 
+// --------------------------------------------------------------------------
+// get time for the given format
+// --------------------------------------------------------------------------
 String TimeHandler::localTime(const String& format) {
     struct tm timeinfo{};
 

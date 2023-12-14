@@ -1,5 +1,5 @@
 //uncomment to get debug in serial
-#define DEBUG 0
+#define DEBUG 1
 
 #define interval_in_Seconds_WiFiCheck 300
 #define interval_in_Seconds_LEDs 30

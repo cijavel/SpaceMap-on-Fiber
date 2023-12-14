@@ -1,7 +1,9 @@
 
 #include "WiFiHandler.h"
 
-
+// --------------------------------------------------------------------------
+// initial Wifi
+// --------------------------------------------------------------------------
 void WiFiHandler::initWifi() {
     int wifiWaitCount = 0;
     WiFiClass::setHostname(DeviceName); //maybe cstr
@@ -30,6 +32,9 @@ void WiFiHandler::initWifi() {
 #endif
 }
 
+// --------------------------------------------------------------------------
+// check wifi status
+// --------------------------------------------------------------------------
 bool WiFiHandler::StatusCheck()
 {
     wl_status_t status = WiFiClass::status();
@@ -48,6 +53,9 @@ bool WiFiHandler::StatusCheck()
     return status == WL_CONNECTED;
 }
 
+// --------------------------------------------------------------------------
+// restart wifi
+// --------------------------------------------------------------------------
 void WiFiHandler::ReStart()
 {
 #ifdef DEBUG
@@ -75,6 +83,9 @@ void WiFiHandler::ReStart()
 #endif
 }
 
+// --------------------------------------------------------------------------
+// checkout wifi in interval
+// --------------------------------------------------------------------------
 bool WiFiHandler::checkWifi(unsigned long currentSeconds) {
     if (currentSeconds % interval_in_Seconds_WiFiCheck == 0) {
         return WiFiHandler::StatusCheck();

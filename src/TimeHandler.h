@@ -8,7 +8,6 @@
 class TimeHandler {
 private:
 
-
 public:
     static String localTime(const String& format);
     static void initTime();

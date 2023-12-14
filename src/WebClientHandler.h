@@ -13,8 +13,6 @@
 
 class WebClientHandler {
 public:
-
-
     static std::vector<SpaceStatusList> getSpaceStatus(std::vector<SpaceStatusList> &spaStaVector,String webpageout, unsigned long currentSeconds);
     static WebClientHandler &getInstance() {
             static WebClientHandler instance; // Guaranteed to be destroyed.

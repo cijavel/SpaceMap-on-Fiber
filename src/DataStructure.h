@@ -5,6 +5,9 @@
 
 enum SpaceStatus {INIT, OPEN, CLOSED, UNKNOWN};
 
+// --------------------------------------------------------------------------
+// Structure for Hackerspaces of interest
+// --------------------------------------------------------------------------
 struct SpaceSearchList {
         uint8_t led;
         String name;
@@ -24,7 +27,9 @@ struct SpaceSearchList {
 
 
 
-
+// --------------------------------------------------------------------------
+// Structure for Hackerspaces status list
+// --------------------------------------------------------------------------
 struct SpaceStatusList {
         int led;
         String name;
