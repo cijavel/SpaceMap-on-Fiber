@@ -8,6 +8,9 @@
 // https://stackoverflow.com/questions/8534526/how-to-initialize-an-array-of-struct-in-c
 
 
+#include <vector>
+#include <NeoPixelBus.h>
+
 #include "Configuration.h"
 #include "WiFiHandler.h"
 #include "WebClientHandler.h"
@@ -15,8 +18,7 @@
 #include "TimeHandler.h"
 #include "DataStructure.h"
 #include "NeoPixelLED.h"
-#include <vector>
-#include <NeoPixelBus.h>
+#include "WebServerHandler.h"
 
 
 
@@ -47,6 +49,8 @@ void setup() {
     NeoPixelLED &NeoLED = NeoPixelLED::getInstance();
     NeoLED.initLEDs();
     NeoLED.enumerateLEDs(500);
+    WebServerHandler &webServer = WebServerHandler::getInstance();
+    webServer.start();
 
     #ifdef RGB_BUILTIN
       digitalWrite(RGB_BUILTIN, LOW);    // Turn the RGB LED off. Turn onboard LED off. HIGH to turn on
@@ -62,6 +66,7 @@ void loop() {
 
     WebClientHandler &WebHandlerobj= WebClientHandler::getInstance();
     NeoPixelLED &NeoLED = NeoPixelLED::getInstance();
+    WebServerHandler &webServer = WebServerHandler::getInstance();
 
 
     unsigned long currentSeconds = millis() / 1000;
@@ -78,6 +83,7 @@ void loop() {
 
 
         NeoLED.updateLEDs(spacestatus, currentSeconds);
+        webServer.setData(spacestatus, currentSeconds);
 
         if (currentSeconds % interval_in_Seconds_Json == 0){    
                     Serial.println("MAIN - Space Status:");

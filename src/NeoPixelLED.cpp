@@ -6,7 +6,7 @@ const uint16_t PixelCount = LED_COUNT; // this example assumes 4 pixels, making 
 const uint8_t PixelPin = LED_DATA_PIN;  // make sure to set this to the correct pin, ignored for Esp8266
 
 // three element pixels, in different order and speeds
-NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(PixelCount, PixelPin);
+NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(LED_COUNT, LED_DATA_PIN);
 
 
 RgbColor copen(0,255,0);
@@ -16,14 +16,6 @@ RgbColor cwhite( 255,255,255);
 RgbColor cblack(0);
 
 
-RgbColor NeoPixelLED::setBrightness(RgbColor color, int brightness) {
-  color = RgbColor(
-    (color.R * brightness) / 255,
-    (color.G * brightness) / 255,
-    (color.B * brightness) / 255
-  );
-  return color;
-}
 
 void NeoPixelLED::initLEDs() {
     strip.Begin();
@@ -37,10 +29,6 @@ void NeoPixelLED::initLEDs() {
     #endif
     
  }
-
-
-//strip.setPixelColor(n, red, green, blue);
-
 
 bool NeoPixelLED::checknumberofLEDs(std::vector<SpaceStatusList> &spacestatus) {
     bool b = true;
@@ -58,10 +46,6 @@ bool NeoPixelLED::checknumberofLEDs(std::vector<SpaceStatusList> &spacestatus) {
         Serial.println(spacestatus.size());
     return b;
  }
-
-
-
-
 
 void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus, unsigned long currentSeconds){
 
@@ -115,5 +99,13 @@ void NeoPixelLED::enumerateLEDs( int delay_time) {
         delay(delay_time/4);
     }
     strip.ClearTo(cblack);
+}
 
+RgbColor NeoPixelLED::setBrightness(RgbColor color, int brightness) {
+  color = RgbColor(
+    (color.R * brightness) / 255,
+    (color.G * brightness) / 255,
+    (color.B * brightness) / 255
+  );
+  return color;
 }
