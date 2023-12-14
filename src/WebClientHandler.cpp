@@ -11,8 +11,12 @@ void WebClientHandler::modifyStatus( std::vector<SpaceStatusList> &spaStaVector,
         continue;
       } 
       change = true; 
-      element.setStatus(status);
-      element.setlastChange(TimeHandler::localTime("%Y.%m.%d %H:%M"));
+      
+      if (element.getStatus() != status) {
+        element.setStatus(status);
+        element.setlastChange(TimeHandler::localTime("%Y.%m.%d %H:%M"));
+      }
+
       break;
     }
 
