@@ -61,7 +61,6 @@ void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus, unsigned
                     strip.SetPixelColor(item.getLED(), setBrightness(cblack, LED_BRIGHTNESS));
                 }
             }
-            Serial.println("set LEDS");
             strip.Show();
         }
     }
@@ -118,7 +117,5 @@ bool NeoPixelLED::checknumberofLEDs(std::vector<SpaceStatusList> &spacestatus) {
         Serial.println(LED_COUNT);
         Serial.println("------------------------------");
     }
-        Serial.print("spaces: ");
-        Serial.println(spacestatus.size());
     return b;
  }
