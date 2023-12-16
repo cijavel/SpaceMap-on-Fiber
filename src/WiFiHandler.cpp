@@ -40,6 +40,13 @@ bool WiFiHandler::StatusCheck()
     wl_status_t status = WiFiClass::status();
     if (status != WL_CONNECTED)
     {
+        #ifdef RGB_BUILTIN
+            neopixelWrite(RGB_BUILTIN,0,0,RGB_BRIGHTNESS); // Blue
+            delay(1000);
+            neopixelWrite(RGB_BUILTIN,0,0,0); // Off / black
+        #endif
+
+
         ReStart();
     }
 #ifdef DEBUG
