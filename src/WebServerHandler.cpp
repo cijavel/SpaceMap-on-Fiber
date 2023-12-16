@@ -42,12 +42,13 @@ void WebServerHandler::handle_index(AsyncWebServerRequest *request)
 
     // Iterate through the vector and add each entry to the HTML
     for (auto& data : dataspacestatus) {
-      html += "<p style=' color:" + getStatusColor(data.getStatus()) +   ";'>";
+      html += "<div style=' color:" + getStatusColor(data.getStatus()) +   ";'>";
       html += "<div>LED No: " + String(data.getLED()) + "</div>";
-      html += "<div>space: " + String(data.getName()) + "</div></div>";
+      html += "<div>space: " + String(data.getName()) + "</div>";
       html += "<div>status: <span style='font-weight: bold;'> " + String(data.getStatus()) + "</span></div>";
       html += "<div>time:   " + String(data.getlastChange()) + "</div>";
-      html += "</p>";
+      html += "</div>";
+      html += "<p></p>";
     }
 
     html += "</body></html>";
