@@ -19,6 +19,7 @@ class DataSpaceList {
         };
 
         int getLEDforName(String name);
+        int getNumberofSpacesonwatch();
        
 };
 #endif //SPACE_API_ON_FIBER_DATASPACELIST_H
