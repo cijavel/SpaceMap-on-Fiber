@@ -15,6 +15,7 @@ public:
     }
     void start();
     void setData(std::vector<SpaceStatusList> &spacestatus, unsigned long currentSeconds);
+    static String getStatusColor(int color);
 private:
     AsyncWebServer server = AsyncWebServer(80);
     static void handle_index(AsyncWebServerRequest *request);
