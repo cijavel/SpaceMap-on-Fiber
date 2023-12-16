@@ -5,16 +5,11 @@
 // --------------------------------------------------------------------------
 // LED No, Name for parsing
 SpaceSearchList searchList[] = {
-    { 1, "OpenLab Augsburg"                   }, 
-    { 2, "/usr/space"                         }, 
-    { 3, "Chaos Computer Club Wien (C3W)"     }, 
-    { 4, "not on api: Fortisauris Slovak"     }, 
-    { 5, "base48"                             },
-    { 6, "IT-Syndikat"                        }, 
-    { 7, "MuCCC"                              }, 
-    { 8, "realraum"                           }, 
-    { 9, "Binary Kitchen"                     }
-   
+    { 0, "OpenLab Augsburg"                   }, 
+    { 1, "IT-Syndikat"                        }, 
+    { 2, "MuCCC"                              }, 
+    { 3, "realraum"                           }, 
+    { 4, "Binary Kitchen"                     }
 };
 
 // --------------------------------------------------------------------------
@@ -29,11 +24,13 @@ int DataSpaceList::getLEDforName(String name) {
         }
     }
     return result;
-
 }
 
 
+int DataSpaceList::getNumberofSpacesonwatch() {
+    return sizeof(searchList) / sizeof(searchList[0]);
+}
 
-
+        
 
 

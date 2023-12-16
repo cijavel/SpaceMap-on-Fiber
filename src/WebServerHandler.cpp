@@ -2,8 +2,12 @@
 #include "Configuration.h"
 #include "DataStructure.h"
 #include "DataSpaceList.h"
+#include "DataSpaceList.h"
 
 static std::vector<SpaceStatusList> dataspacestatus;
+DataSpaceList &listofspaces= DataSpaceList::getInstance();
+
+
 
 // --------------------------------------------------------------------------
 // set up page
@@ -21,15 +25,29 @@ WebServerHandler::WebServerHandler()
 void WebServerHandler::handle_index(AsyncWebServerRequest *request)
 {
     String html = "<html><body>";
+
+
+    html += "<h1>System status</h1>";
+    html += "<p>";
+    html += "<div>webpage:         " + String(webpage_SpaceAPI) + "</div>";
+    html += "<div>Leds in System:  " + String(LED_COUNT) + "</div>";
+    html += "<div>Spaces on Watch: " + String(listofspaces.getNumberofSpacesonwatch()) + "</div>";
+    html += "<div>Spaces found:    " + String(dataspacestatus.size()) + "</div>";
+    html += "</p>";
+    html += "<hr>";  
+
+
+
     html += "<h1>Space Data</h1>";
 
     // Iterate through the vector and add each entry to the HTML
     for (auto& data : dataspacestatus) {
-      html += "<p>LED No: " + String(data.getLED()) + "</p>";
-      html += "<p>status: " + String(data.getStatus()) + "</p>";
-      html += "<p>time: "   + String(data.getlastChange()) + "</p>";
-      html += "<p>space: "  + String(data.getName()) + "</p>";
-      html += "<hr>";  // Add a horizontal line between entries
+      html += "<p style=' color:" + getStatusColor(data.getStatus()) +   ";'>";
+      html += "<div>LED No: " + String(data.getLED()) + "</div>";
+      html += "<div>space: " + String(data.getName()) + "</div></div>";
+      html += "<div>status: <span style='font-weight: bold;'> " + String(data.getStatus()) + "</span></div>";
+      html += "<div>time:   " + String(data.getlastChange()) + "</div>";
+      html += "</p>";
     }
 
     html += "</body></html>";
@@ -64,3 +82,25 @@ void WebServerHandler::start()
 {
   server.begin();
 }
+
+String WebServerHandler::getStatusColor(int color) {
+
+
+      switch ( color )
+      {
+         case 1:
+            return "green";
+            break;
+         case 2:
+            return "red";
+            break;
+         case 3:
+            return "blue";
+            break;
+         default:
+            break;
+      }
+
+    return "black";
+}
+

@@ -78,9 +78,8 @@ void loop() {
         }
 
         if (currentSeconds % interval_in_Seconds_Json == 0){    
-            Serial.println("Space Status:");
+                Serial.println("Space Status:");
                 for (const auto& data : spacestatus) {
-
                     Serial.print("led: ");
                     Serial.print(data.getLED());
                     Serial.print(", name: ");
