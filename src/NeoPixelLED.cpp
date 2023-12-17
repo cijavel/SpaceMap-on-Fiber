@@ -102,6 +102,46 @@ RgbColor NeoPixelLED::setBrightness(RgbColor color, int brightness) {
   return color;
 }
 
+
+// --------------------------------------------------------------------------
+// set the Brightness of led Random
+// --------------------------------------------------------------------------
+RgbColor NeoPixelLED::setBrightnessStar(RgbColor color, int brightness, int variante) {
+
+    if (brightness <= variante){
+        variante = 0;
+    }
+
+    int randomValue = random(1, (brightness-variante)+1); 
+  
+
+
+  color = RgbColor(
+    (color.R * randomValue ) / 255,
+    (color.G * randomValue) / 255,
+    (color.B * randomValue) / 255
+  );
+  return color;
+}
+
+// --------------------------------------------------------------------------
+// set the Brightness of led Colorshift
+// --------------------------------------------------------------------------
+RgbColor NeoPixelLED::setBrightnessStarColorshift(RgbColor color, int brightness, int colorshift) {
+  int randomValue = random(-1 * colorshift, colorshift); 
+
+  color = RgbColor(
+    (color.R * (brightness + randomValue)) / 255,
+    (color.G * (brightness + randomValue)) / 255,
+    (color.B * (brightness + randomValue)) / 255
+  );
+  return color;
+}
+
+
+
+
+
 // --------------------------------------------------------------------------
 // heck, if we got enough leds for all Hackerspace in list
 // --------------------------------------------------------------------------

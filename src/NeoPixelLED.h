@@ -25,6 +25,8 @@ private:
     NeoPixelLED(NeoPixelLED const&);   // Don't Implement
     int transformColor(int color);
     RgbColor setBrightness(RgbColor color, int brightness);
+    RgbColor setBrightnessStar(RgbColor color, int brightness, int variante);
+    RgbColor setBrightnessStarColorshift(RgbColor color, int brightness, int colorshift);
 
 };
 #endif //SPACE_API_ON_FIBER_NEOPIXEL_H
