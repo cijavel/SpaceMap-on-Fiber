@@ -1,5 +1,6 @@
 
 #include "WiFiHandler.h"
+#include "NeoPixelLED.h"
 
 // --------------------------------------------------------------------------
 // initial Wifi
@@ -7,10 +8,11 @@
 void WiFiHandler::initWifi() {
     int wifiWaitCount = 0;
     WiFiClass::setHostname(DeviceName); //maybe cstr
-#ifdef DEBUG
-    Serial.print("\nWIFI: Connecting to ");
-    Serial.println(WIFI_SSID);
-#endif
+    #ifdef DEBUG
+        Serial.print("\nWIFI: Connecting to ");
+        Serial.println(WIFI_SSID);
+    #endif
+
     WiFi.begin(WIFI_SSID, WIFI_PW);
 
     while (WiFiClass::status() != WL_CONNECTED && wifiWaitCount < 20)
@@ -18,18 +20,18 @@ void WiFiHandler::initWifi() {
         delay(250);
         wifiWaitCount++;
     }
-#ifdef DEBUG
-    if (WiFiClass::status() == WL_CONNECTED)
-    {
-        Serial.println("WIFI: connected.");
-        Serial.print("WIFI: IP address: ");
-        Serial.println(WiFi.localIP());
-    }
-    else
-    {
-        Serial.println("WIFI: not connected");
-    }
-#endif
+    #ifdef DEBUG
+        if (WiFiClass::status() == WL_CONNECTED)
+        {
+            Serial.println("WIFI: connected.");
+            Serial.print("WIFI: IP address: ");
+            Serial.println(WiFi.localIP());
+        }
+        else
+        {
+            Serial.println("WIFI: not connected");
+        }
+    #endif
 }
 
 // --------------------------------------------------------------------------
@@ -40,23 +42,9 @@ bool WiFiHandler::StatusCheck()
     wl_status_t status = WiFiClass::status();
     if (status != WL_CONNECTED)
     {
-        #ifdef RGB_BUILTIN
-            neopixelWrite(RGB_BUILTIN,0,0,RGB_BRIGHTNESS); // Blue
-            delay(1000);
-            neopixelWrite(RGB_BUILTIN,0,0,0); // Off / black
-        #endif
-
-
+        Serial.print("WIFI: reconnecting");
         ReStart();
     }
-#ifdef DEBUG
-    else
-    {
-        Serial.print("WIFI: Still connected: ");
-        Serial.println(WiFi.localIP());
-        Serial.println();
-    }
-#endif
     return status == WL_CONNECTED;
 }
 
@@ -95,7 +83,17 @@ void WiFiHandler::ReStart()
 // --------------------------------------------------------------------------
 bool WiFiHandler::checkWifi(unsigned long currentSeconds) {
     if (currentSeconds % interval_in_Seconds_WiFiCheck == 0) {
-        return WiFiHandler::StatusCheck();
+        WiFiHandler::StatusCheck();
+
+        if (WiFiClass::status() == WL_CONNECTED)
+        {
+            neopixelWrite(RGB_BUILTIN ,0,ONBOARD_BRIGHTNESS,0); // GREEN
+        }
+        else
+        {
+            neopixelWrite(RGB_BUILTIN ,ONBOARD_BRIGHTNESS,0,0); // RED
+        }
+        return WL_CONNECTED;
     }
     return false;
 }
