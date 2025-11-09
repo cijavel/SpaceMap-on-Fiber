@@ -21,14 +21,7 @@ RgbColor cblack(0);
 void NeoPixelLED::initLEDs() {
     strip.Begin();
     strip.ClearTo(cblack);
-    strip.Show();
-
-    #ifdef RGB_BUILTIN
-        digitalWrite(RGB_BUILTIN, LOW);    // Turn the RGB LED off. Turn onboard LED off. HIGH to turn on
-        //neopixelWrite(RGB_BUILTIN,5,0,0); // Red
-        //delay(1000);
-    #endif
-    
+    strip.Show();   
  }
 
 // --------------------------------------------------------------------------
