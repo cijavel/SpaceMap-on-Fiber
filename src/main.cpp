@@ -15,8 +15,6 @@
 #include "TimeHandler.h"
 #include "DataStructure.h"
 #include "NeoPixelLED.h"
-#include "WebServerHandler.h"
-
 
 #ifdef DEBUG
 static void PrintRamUsage(unsigned long currentSeconds) {
@@ -48,16 +46,12 @@ void setup() {
     NeoPixelLED &NeoLED = NeoPixelLED::getInstance();
     NeoLED.initLEDs();
     NeoLED.enumerateLEDs(500);
-    WebServerHandler &webServer = WebServerHandler::getInstance();
-    webServer.start();
 
     #ifdef RGB_BUILTIN
       digitalWrite(RGB_BUILTIN, LOW);    // Turn the RGB LED off. Turn onboard LED off. HIGH to turn on
     #endif
     
 }
-
-
 
 // --------------------------------------------------------------------------
 // LOOP
@@ -66,7 +60,6 @@ void loop() {
 
     WebClientHandler &WebHandlerobj= WebClientHandler::getInstance();
     NeoPixelLED &NeoLED = NeoPixelLED::getInstance();
-    WebServerHandler &webServer = WebServerHandler::getInstance();
 
 
     unsigned long currentSeconds = millis() / 1000;
@@ -95,5 +88,4 @@ void loop() {
         spacestatus = WebHandlerobj.getSpaceStatus(spacestatus, F(webpage_SpaceAPI), currentSeconds);
 
         NeoLED.updateLEDs(spacestatus, currentSeconds);
-        webServer.setData(spacestatus, currentSeconds);
 }
