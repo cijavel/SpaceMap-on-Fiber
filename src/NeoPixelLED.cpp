@@ -28,17 +28,7 @@ void NeoPixelLED::initLEDs() {
 // update Hackerspace status on led strip
 // --------------------------------------------------------------------------
 void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus, unsigned long currentSeconds){
-
-
-    
     if (currentSeconds % interval_in_Seconds_LEDs == 0){  
-
-        #ifdef RGB_BUILTIN
-            digitalWrite(RGB_BUILTIN, LOW);    // Turn the RGB LED off. Turn onboard LED off. HIGH to turn on
-            //neopixelWrite(RGB_BUILTIN,5,0,0); // Red
-            //delay(1000);
-        #endif
-
         if (checknumberofLEDs(spacestatus) == true){ 
             for (const auto& item : spacestatus) {
 
@@ -57,7 +47,6 @@ void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus, unsigned
             strip.Show();
         }
     }
-
 }
 
 // --------------------------------------------------------------------------
