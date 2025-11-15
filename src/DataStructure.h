@@ -11,10 +11,12 @@ enum SpaceStatus {INIT, OPEN, CLOSED, UNKNOWN};
 struct SpaceSearchList {
         uint8_t led;
         String name;
+        String city;
 
-        SpaceSearchList(uint8_t led, String name) {
+        SpaceSearchList(uint8_t led, String name, String city) {
             this->led = led;
             this->name = name;
+            this->city = city;
         }
         int getLED() const {
             return this->led;
