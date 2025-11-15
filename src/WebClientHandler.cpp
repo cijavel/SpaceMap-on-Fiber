@@ -31,6 +31,7 @@ void WebClientHandler::modifyStatus( std::vector<SpaceStatusList> &spaStaVector,
 // --------------------------------------------------------------------------
 std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList> &spaceStatusVector,String webpageout, unsigned long currentSeconds) {
    
+
     DataSpaceList &SpaceBase = DataSpaceList::getInstance();
     int spaceledNr;
     String spaceName;
@@ -39,6 +40,8 @@ std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(std::vector<SpaceS
 
     if (currentSeconds % interval_in_Seconds_Json == 0){
 
+      //set working status to BLUE
+      neopixelWrite(RGB_BUILTIN ,0,0,ONBOARD_BRIGHTNESS); // BLUE
       // Create an empty array to hold Space objects
       WiFiClientSecure client;
 
@@ -87,6 +90,19 @@ std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(std::vector<SpaceS
       } while (payload.findUntil(",","]"));
     }
     http.end();
+
+
+    //WLAN Status back to GREEN/RED
+    if (WiFiClass::status() == WL_CONNECTED)
+    {
+        neopixelWrite(RGB_BUILTIN ,0,ONBOARD_BRIGHTNESS,0); // GREEN
+    }
+    else
+    {
+        neopixelWrite(RGB_BUILTIN ,ONBOARD_BRIGHTNESS,0,0); // RED
+    }
+
+    
     return spaceStatusVector;
 }
 

@@ -5,7 +5,6 @@
 #include "Credentials.h"
 #include "Configuration.h"
 
-
 class WiFiHandler{
 public:
     static void initWifi();
