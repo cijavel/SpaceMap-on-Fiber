@@ -31,10 +31,8 @@ void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus, unsigned
     if (currentSeconds % interval_in_Seconds_LEDs == 0){  
         if (checknumberofLEDs(spacestatus) == true){ 
             for (const auto& item : spacestatus) {
-
                 if (item.getStatus() == SpaceStatus::OPEN) {
                     // red and green are swapped for our PL9823 leds :)
-
                     strip.SetPixelColor(item.getLED(), setBrightness(copen, LED_BRIGHTNESS));
                 } else if(item.getStatus() == SpaceStatus::CLOSED) {
                     strip.SetPixelColor(item.getLED(), setBrightness(cclosed, LED_BRIGHTNESS));
