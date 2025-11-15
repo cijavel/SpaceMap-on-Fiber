@@ -69,7 +69,7 @@ void loop() {
     WiFiHandler::checkWifi(currentSeconds);
     
     #ifdef DEBUG
-        if (currentSeconds % interval_in_Seconds_Json == 0){    
+        if (currentSeconds % interval_in_Seconds_api == 0){    
                 Serial.println("Space Status:");
                 for (const auto& data : spacestatus) {
                     Serial.print("led: ");

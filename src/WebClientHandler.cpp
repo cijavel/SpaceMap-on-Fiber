@@ -38,7 +38,7 @@ std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(std::vector<SpaceS
     String currentSpaceStatus;
     HTTPClient http; 
 
-    if (currentSeconds % interval_in_Seconds_Json == 0){
+    if (currentSeconds % interval_in_Seconds_api == 0){
 
       //set working status to BLUE
       neopixelWrite(RGB_BUILTIN ,0,0,ONBOARD_BRIGHTNESS); // BLUE
