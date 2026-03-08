@@ -71,9 +71,9 @@ void loop() {
     unsigned long currentSeconds = millis() / 1000;
 
     if (currentSeconds - lastWifiCheck >= interval_in_Seconds_WiFiCheck) {
-    WiFiHandler::checkWifi();
-    lastWifiCheck = currentSeconds;
-}
+        WiFiHandler::checkWifi();
+        lastWifiCheck = currentSeconds;
+    }
     
     #ifdef DEBUG
     if (currentSeconds - lastRamPrint >= interval_in_Seconds_RAMPrintout) {

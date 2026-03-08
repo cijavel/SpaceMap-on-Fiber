@@ -46,6 +46,14 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList> &spaceStatusV
     http.begin(client, webpageout );
     http.useHTTP10(true); // important for chunking and stream reading
     int httpCode = http.GET();
+
+    if (httpCode != HTTP_CODE_OK) {
+        Serial.print(F("HTTP GET failed, code: "));
+        Serial.println(httpCode);
+        http.end();
+        return;
+    }
+
     Stream& payload = http.getStream();
 
     StaticJsonDocument<128> filter;
