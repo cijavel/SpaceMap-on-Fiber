@@ -17,17 +17,15 @@
 #include "NeoPixelLED.h"
 
 #ifdef DEBUG
-    static void PrintRamUsage(unsigned long currentSeconds) {
-        if (currentSeconds % interval_in_Seconds_RAMPrintout == 0) {
-            Serial.print("Memory Usage: ");
-            uint32_t freeHeap = ESP.getFreeHeap();
-            uint32_t maximumHeap = ESP.getHeapSize();
-            uint32_t usedHeap = maximumHeap - freeHeap;
-            Serial.print(usedHeap);
-            Serial.print("b | ");
-            Serial.print(maximumHeap);
-            Serial.println("b");
-        }
+    static void PrintRamUsage() {
+        Serial.print("Memory Usage: ");
+        uint32_t freeHeap = ESP.getFreeHeap();
+        uint32_t maximumHeap = ESP.getHeapSize();
+        uint32_t usedHeap = maximumHeap - freeHeap;
+        Serial.print(usedHeap);
+        Serial.print("b | ");
+        Serial.print(maximumHeap);
+        Serial.println("b");
     }
 #endif
 
@@ -78,10 +76,10 @@ void loop() {
     
     #ifdef DEBUG
     if (currentSeconds - lastRamPrint >= interval_in_Seconds_RAMPrintout) {
-        PrintRamUsage(currentSeconds);
+        PrintRamUsage();
         lastRamPrint = currentSeconds;
     }
-    if (currentSeconds - lastApiCall == 0){    
+    if (currentSeconds - lastApiCall >= interval_in_Seconds_api){
         Serial.println("Space Status:");
                 for (const auto& data : spacestatus) {
                     Serial.print("led: ");
