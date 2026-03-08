@@ -57,7 +57,7 @@ std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(std::vector<SpaceS
     filter["state"]["open"] = true;
     filter["state"]["lastchange"] = true;
 
-    DynamicJsonDocument doc(1024);   // You can use a String as your JSON input.WARNING: the string in the input  will be duplicated in the JsonDocument.
+    DynamicJsonDocument doc(4096);  // You can use a String as your JSON input.WARNING: the string in the input  will be duplicated in the JsonDocument.
 
     payload.find("["); // should actually be byte 0 of the response stream
     do {

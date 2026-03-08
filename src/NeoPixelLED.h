@@ -23,7 +23,6 @@ public:
 private:
     NeoPixelLED() {};                   // Constructor? (the {} brackets) are needed here.
     NeoPixelLED(NeoPixelLED const&);   // Don't Implement
-    int transformColor(int color);
     RgbColor setBrightness(RgbColor color, int brightness);
     RgbColor setBrightnessStar(RgbColor color, int brightness, int variante);
     RgbColor setBrightnessStarColorshift(RgbColor color, int brightness, int colorshift);
