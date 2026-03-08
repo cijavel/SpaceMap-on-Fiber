@@ -28,9 +28,8 @@ void NeoPixelLED::initLEDs() {
 // update Hackerspace status on led strip
 // --------------------------------------------------------------------------
 void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus){
-    if (checknumberofLEDs(spacestatus) == true){   
-        if (checknumberofLEDs(spacestatus) == true){ 
-            for (const auto& item : spacestatus) {
+    if (checknumberofLEDs(spacestatus) == true){
+        for (const auto& item : spacestatus) {
                 if (item.getStatus() == SpaceStatus::OPEN) {
                     // red and green are swapped for our PL9823 leds :)
                     strip.SetPixelColor(item.getLED(), setBrightness(copen, LED_BRIGHTNESS));
@@ -41,9 +40,8 @@ void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus){
                 } else {
                     strip.SetPixelColor(item.getLED(), setBrightness(cblack, LED_BRIGHTNESS));
                 }
-            }
-            strip.Show();
         }
+        strip.Show();
     }
 }
 
