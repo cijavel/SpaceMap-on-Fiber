@@ -2,6 +2,8 @@
 //#define DEBUG 1
 
 #define interval_in_Seconds_WiFiCheck 300
+#define WIFI_CONNECT_TIMEOUT_STEPS 20   // 20 × 500ms = 10 Sekunden pro Versuch
+#define WIFI_MAX_RETRIES 5              // max. 5 Versuche beim Start
 #define interval_in_Seconds_LEDs 10
 #define interval_in_Seconds_api 120
 #define interval_in_Seconds_RAMPrintout 30

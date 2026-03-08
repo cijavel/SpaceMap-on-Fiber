@@ -6,20 +6,34 @@
 // initial Wifi
 // --------------------------------------------------------------------------
 void WiFiHandler::initWifi() {
-    int wifiWaitCount = 0;
-    WiFiClass::setHostname(DeviceName); //maybe cstr
+    WiFiClass::setHostname(DeviceName);
     #ifdef DEBUG
         Serial.print("\nWIFI: Connecting to ");
         Serial.println(WIFI_SSID);
     #endif
 
-    WiFi.begin(WIFI_SSID, WIFI_PW);
-
-    while (WiFiClass::status() != WL_CONNECTED && wifiWaitCount < 20)
-    {
-        delay(250);
-        wifiWaitCount++;
+    int retryCount = 0;
+    while (WiFiClass::status() != WL_CONNECTED && retryCount < WIFI_MAX_RETRIES) {
+        WiFi.begin(WIFI_SSID, WIFI_PW);
+        int wifiWaitCount = 0;
+        while (WiFiClass::status() != WL_CONNECTED && wifiWaitCount < WIFI_CONNECT_TIMEOUT_STEPS)
+        {
+            delay(500);
+            wifiWaitCount++;
+        }
+        if (WiFiClass::status() != WL_CONNECTED) {
+            retryCount++;
+            #ifdef DEBUG
+                Serial.print("WIFI: retry ");
+                Serial.print(retryCount);
+                Serial.print(" of ");
+                Serial.println(WIFI_MAX_RETRIES);
+            #endif
+            WiFi.disconnect();
+            delay(1000);
+        }
     }
+
     #ifdef DEBUG
         if (WiFiClass::status() == WL_CONNECTED)
         {
@@ -29,7 +43,7 @@ void WiFiHandler::initWifi() {
         }
         else
         {
-            Serial.println("WIFI: not connected");
+            Serial.println("WIFI: not connected after all retries");
         }
     #endif
 }
@@ -54,17 +68,13 @@ bool WiFiHandler::StatusCheck()
 // --------------------------------------------------------------------------
 void WiFiHandler::ReStart()
 {
-#ifdef DEBUG
-    // Connect to WiFi network
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(WIFI_SSID);
-#endif
+    WiFi.disconnect();
+    delay(1000);
     WiFi.begin(WIFI_SSID, WIFI_PW);
     int wifiWaitCount = 0;
-    while (WiFiClass::status() != WL_CONNECTED && wifiWaitCount < 20)
+    while (WiFiClass::status() != WL_CONNECTED && wifiWaitCount < WIFI_CONNECT_TIMEOUT_STEPS)
     {
-        delay(250);
+        delay(500);
         wifiWaitCount++;
     }
 #ifdef DEBUG
