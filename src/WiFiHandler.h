@@ -8,7 +8,7 @@
 class WiFiHandler{
 public:
     static void initWifi();
-    static bool checkWifi(unsigned long currentSeconds);
+    static bool checkWifi();
 private:
     static bool StatusCheck();
     static void ReStart();

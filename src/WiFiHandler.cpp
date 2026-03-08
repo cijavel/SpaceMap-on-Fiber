@@ -81,20 +81,17 @@ void WiFiHandler::ReStart()
 // --------------------------------------------------------------------------
 // checkout wifi in interval
 // --------------------------------------------------------------------------
-bool WiFiHandler::checkWifi(unsigned long currentSeconds) {
-    if (currentSeconds % interval_in_Seconds_WiFiCheck == 0) {
-        WiFiHandler::StatusCheck();
+bool WiFiHandler::checkWifi() {
+    WiFiHandler::StatusCheck();
 
-        if (WiFiClass::status() == WL_CONNECTED)
-        {
-            neopixelWrite(RGB_BUILTIN ,0,ONBOARD_BRIGHTNESS,0); // GREEN
-        }
-        else
-        {
-            neopixelWrite(RGB_BUILTIN ,ONBOARD_BRIGHTNESS,0,0); // RED
-        }
-        return WL_CONNECTED;
+    if (WiFiClass::status() == WL_CONNECTED)
+    {
+        neopixelWrite(RGB_BUILTIN ,0,ONBOARD_BRIGHTNESS,0); // GREEN
     }
-    return false;
+    else
+    {
+        neopixelWrite(RGB_BUILTIN ,ONBOARD_BRIGHTNESS,0,0); // RED
+    }
+    return WiFiClass::status() == WL_CONNECTED;
 }
 

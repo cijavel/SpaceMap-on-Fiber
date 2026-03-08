@@ -72,7 +72,7 @@ void loop() {
     unsigned long currentSeconds = millis() / 1000;
 
     if (currentSeconds - lastWifiCheck >= interval_in_Seconds_WiFiCheck) {
-    WiFiHandler::checkWifi(currentSeconds);
+    WiFiHandler::checkWifi();
     lastWifiCheck = currentSeconds;
 }
     
