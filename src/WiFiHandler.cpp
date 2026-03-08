@@ -48,6 +48,12 @@ void WiFiHandler::initWifi() {
             Serial.println("WIFI: not connected after all retries");
         }
     #endif
+
+    if (WiFiClass::status() != WL_CONNECTED) {
+        Serial.println("WIFI: init failed, rebooting...");
+        delay(1000);
+        ESP.restart();
+    }
 }
 
 // --------------------------------------------------------------------------
@@ -107,16 +113,16 @@ void WiFiHandler::ReStart()
 // checkout wifi in interval
 // --------------------------------------------------------------------------
 bool WiFiHandler::checkWifi() {
-    WiFiHandler::StatusCheck();
+    bool connected = WiFiHandler::StatusCheck();
 
-    if (WiFiClass::status() == WL_CONNECTED)
+    if (connected)
     {
-        neopixelWrite(RGB_BUILTIN ,0,ONBOARD_BRIGHTNESS,0); // GREEN
+        neopixelWrite(RGB_BUILTIN, 0, ONBOARD_BRIGHTNESS, 0); // GREEN
     }
     else
     {
-        neopixelWrite(RGB_BUILTIN ,ONBOARD_BRIGHTNESS,0,0); // RED
+        neopixelWrite(RGB_BUILTIN, ONBOARD_BRIGHTNESS, 0, 0); // RED
     }
-    return WiFiClass::status() == WL_CONNECTED;
+    return connected;
 }
 
