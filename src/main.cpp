@@ -95,7 +95,9 @@ void loop() {
     #endif
     if (currentSeconds - lastApiCall >= interval_in_Seconds_api) {
         spacestatus = WebHandlerobj.getSpaceStatus(spacestatus, F(webpage_SpaceAPI));
+        currentSeconds = millis() / 1000;
         lastApiCall = currentSeconds;
+        lastLedUpdate = currentSeconds; // LED-Update direkt nach API-Call zurücksetzen
     }
     if (currentSeconds - lastLedUpdate >= interval_in_Seconds_LEDs) {
         NeoLED.updateLEDs(spacestatus);
