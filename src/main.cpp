@@ -10,6 +10,7 @@
 
 #include "Configuration.h"
 #include "WiFiHandler.h"
+#include <WiFi.h>
 #include "WebClientHandler.h"
 #include "DataSpaceList.h"
 #include "TimeHandler.h"
@@ -94,10 +95,16 @@ void loop() {
         }
     #endif
     if (currentSeconds - lastApiCall >= interval_in_Seconds_api) {
+        neopixelWrite(RGB_BUILTIN, 0, 0, ONBOARD_BRIGHTNESS); // BLUE – API call running
         spacestatus = WebHandlerobj.getSpaceStatus(spacestatus, F(webpage_SpaceAPI));
         currentSeconds = millis() / 1000;
         lastApiCall = currentSeconds;
-        lastLedUpdate = currentSeconds; // LED-Update direkt nach API-Call zurücksetzen
+        lastLedUpdate = currentSeconds;
+        if (WiFiClass::status() == WL_CONNECTED) {
+            neopixelWrite(RGB_BUILTIN, 0, ONBOARD_BRIGHTNESS, 0); // GREEN
+        } else {
+            neopixelWrite(RGB_BUILTIN, ONBOARD_BRIGHTNESS, 0, 0); // RED
+        }
     }
     if (currentSeconds - lastLedUpdate >= interval_in_Seconds_LEDs) {
         NeoLED.updateLEDs(spacestatus);
