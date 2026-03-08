@@ -66,6 +66,7 @@ void NeoPixelLED::enumerateLEDs( int delay_time) {
         delay(delay_time/4);
     }
     strip.ClearTo(cblack);
+    strip.Show();
 }
 
 // --------------------------------------------------------------------------
@@ -106,12 +107,13 @@ RgbColor NeoPixelLED::setBrightnessStar(RgbColor color, int brightness, int vari
 // set the Brightness of led Colorshift
 // --------------------------------------------------------------------------
 RgbColor NeoPixelLED::setBrightnessStarColorshift(RgbColor color, int brightness, int colorshift) {
-  int randomValue = random(-1 * colorshift, colorshift); 
+  int randomValue = random(-1 * colorshift, colorshift);
+  int adjustedBrightness = max(0, min(255, brightness + randomValue));
 
   color = RgbColor(
-    (color.R * (brightness + randomValue)) / 255,
-    (color.G * (brightness + randomValue)) / 255,
-    (color.B * (brightness + randomValue)) / 255
+    (color.R * adjustedBrightness) / 255,
+    (color.G * adjustedBrightness) / 255,
+    (color.B * adjustedBrightness) / 255
   );
   return color;
 }
