@@ -32,7 +32,12 @@
 #endif
 
 std::vector<SpaceStatusList> spacestatus;
-unsigned long last = 0;
+unsigned long lastApiCall = 0;
+unsigned long lastWifiCheck = 0;
+unsigned long lastLedUpdate = 0;
+#ifdef DEBUG
+unsigned long lastRamPrint = 0;
+#endif
 
 // --------------------------------------------------------------------------
 // SETUP
@@ -66,11 +71,18 @@ void loop() {
 
     unsigned long currentSeconds = millis() / 1000;
 
+    if (currentSeconds - lastWifiCheck >= interval_in_Seconds_WiFiCheck) {
     WiFiHandler::checkWifi(currentSeconds);
+    lastWifiCheck = currentSeconds;
+}
     
     #ifdef DEBUG
-        if (currentSeconds % interval_in_Seconds_api == 0){    
-                Serial.println("Space Status:");
+    if (currentSeconds - lastRamPrint >= interval_in_Seconds_RAMPrintout) {
+        PrintRamUsage(currentSeconds);
+        lastRamPrint = currentSeconds;
+    }
+    if (currentSeconds - lastApiCall == 0){    
+        Serial.println("Space Status:");
                 for (const auto& data : spacestatus) {
                     Serial.print("led: ");
                     Serial.print(data.getLED());
@@ -83,6 +95,12 @@ void loop() {
                 }
         }
     #endif
-        spacestatus = WebHandlerobj.getSpaceStatus(spacestatus, F(webpage_SpaceAPI), currentSeconds);
-        NeoLED.updateLEDs(spacestatus, currentSeconds);
+    if (currentSeconds - lastApiCall >= interval_in_Seconds_api) {
+        spacestatus = WebHandlerobj.getSpaceStatus(spacestatus, F(webpage_SpaceAPI));
+        lastApiCall = currentSeconds;
+    }
+    if (currentSeconds - lastLedUpdate >= interval_in_Seconds_LEDs) {
+        NeoLED.updateLEDs(spacestatus);
+        lastLedUpdate = currentSeconds;
+    }
 }

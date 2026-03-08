@@ -27,8 +27,8 @@ void NeoPixelLED::initLEDs() {
 // --------------------------------------------------------------------------
 // update Hackerspace status on led strip
 // --------------------------------------------------------------------------
-void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus, unsigned long currentSeconds){
-    if (currentSeconds % interval_in_Seconds_LEDs == 0){  
+void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus){
+    if (checknumberofLEDs(spacestatus) == true){   
         if (checknumberofLEDs(spacestatus) == true){ 
             for (const auto& item : spacestatus) {
                 if (item.getStatus() == SpaceStatus::OPEN) {

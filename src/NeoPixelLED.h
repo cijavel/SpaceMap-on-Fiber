@@ -15,7 +15,7 @@ public:
             static NeoPixelLED instance; // Guaranteed to be destroyed.
             return instance;// Instantiated on first use.
     };
-    void updateLEDs(std::vector<SpaceStatusList> &spacestatus, unsigned long currentSeconds);
+    void updateLEDs(std::vector<SpaceStatusList> &spacestatus);
     void enumerateLEDs( int delay_time);
     void initLEDs();
     bool checknumberofLEDs(std::vector<SpaceStatusList> &spacestatus);
