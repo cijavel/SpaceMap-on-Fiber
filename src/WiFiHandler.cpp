@@ -2,6 +2,8 @@
 #include "WiFiHandler.h"
 #include "NeoPixelLED.h"
 
+int WiFiHandler::failedReconnectCount = 0;
+
 // --------------------------------------------------------------------------
 // initial Wifi
 // --------------------------------------------------------------------------
@@ -58,7 +60,19 @@ bool WiFiHandler::StatusCheck()
     {
         Serial.print("WIFI: reconnecting");
         ReStart();
-        status = WiFiClass::status();  // Status nach Reconnect neu lesen
+        status = WiFiClass::status();
+        if (status != WL_CONNECTED) {
+            failedReconnectCount++;
+            Serial.print("WIFI: failed reconnects: ");
+            Serial.println(failedReconnectCount);
+            if (failedReconnectCount >= WIFI_MAX_FAILED_RECONNECTS) {
+                Serial.println("WIFI: max reconnects reached, rebooting...");
+                delay(1000);
+                ESP.restart();
+            }
+        } else {
+            failedReconnectCount = 0;
+        }
     }
     return status == WL_CONNECTED;
 }

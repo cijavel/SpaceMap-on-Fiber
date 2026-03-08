@@ -12,5 +12,6 @@ public:
 private:
     static bool StatusCheck();
     static void ReStart();
+    static int failedReconnectCount;
 };
 #endif //SPACE_API_ON_FIBER_WIFIHANDLER_H
