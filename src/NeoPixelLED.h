@@ -18,11 +18,11 @@ public:
     void updateLEDs(std::vector<SpaceStatusList> &spacestatus);
     void enumerateLEDs( int delay_time);
     void initLEDs();
-    bool checknumberofLEDs(std::vector<SpaceStatusList> &spacestatus);
 
 private:
-    NeoPixelLED() {};                   // Constructor? (the {} brackets) are needed here.
-    NeoPixelLED(NeoPixelLED const&);   // Don't Implement
+    NeoPixelLED() {};
+    NeoPixelLED(NeoPixelLED const&);
+    bool checknumberofLEDs(std::vector<SpaceStatusList> &spacestatus);
     RgbColor setBrightness(RgbColor color, int brightness);
     RgbColor setBrightnessStar(RgbColor color, int brightness, int variante);
     RgbColor setBrightnessStarColorshift(RgbColor color, int brightness, int colorshift);

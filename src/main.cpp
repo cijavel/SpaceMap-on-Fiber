@@ -96,7 +96,7 @@ void loop() {
     #endif
     if (currentSeconds - lastApiCall >= interval_in_Seconds_api) {
         neopixelWrite(RGB_BUILTIN, 0, 0, ONBOARD_BRIGHTNESS); // BLUE – API call running
-        spacestatus = WebHandlerobj.getSpaceStatus(spacestatus, F(webpage_SpaceAPI));
+        WebHandlerobj.getSpaceStatus(spacestatus, F(webpage_SpaceAPI));
         currentSeconds = millis() / 1000;
         lastApiCall = currentSeconds;
         lastLedUpdate = currentSeconds;

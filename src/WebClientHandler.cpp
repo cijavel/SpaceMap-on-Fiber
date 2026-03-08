@@ -29,7 +29,7 @@ void WebClientHandler::modifyStatus( std::vector<SpaceStatusList> &spaStaVector,
 // --------------------------------------------------------------------------
 // download and parse json from spaceAPI. Call to set up status list 
 // --------------------------------------------------------------------------
-std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList> &spaceStatusVector, String webpageout) {
+void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList> &spaceStatusVector, String webpageout) {
    
 
     DataSpaceList &SpaceBase = DataSpaceList::getInstance();
@@ -85,8 +85,6 @@ std::vector<SpaceStatusList> WebClientHandler::getSpaceStatus(std::vector<SpaceS
         }
     } while (payload.findUntil(",","]"));
     http.end();
-
-    return spaceStatusVector;
 }
 
 
