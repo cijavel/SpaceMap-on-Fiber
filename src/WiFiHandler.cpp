@@ -44,6 +44,7 @@ bool WiFiHandler::StatusCheck()
     {
         Serial.print("WIFI: reconnecting");
         ReStart();
+        status = WiFiClass::status();  // Status nach Reconnect neu lesen
     }
     return status == WL_CONNECTED;
 }
