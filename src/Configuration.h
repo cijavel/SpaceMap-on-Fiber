@@ -5,8 +5,6 @@
 #define interval_in_Seconds_LEDs 10
 #define interval_in_Seconds_api 120
 #define interval_in_Seconds_RAMPrintout 30
-#define interval_in_Seconds_webserver 60
-
 
 #define webpage_SpaceAPI "https://spaceapi.ccc.de/api/spaces"
 
