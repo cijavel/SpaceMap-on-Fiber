@@ -18,8 +18,17 @@ public:
     static void getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusList,
                                const String& spaceApiUrl);
 
+    // Returns the HTTP status code of the most recent API fetch (0 = never fetched).
+    static int  getLastHttpCode()   { return _lastHttpCode; }
+
+    // Returns the millis() timestamp of the most recent fetch attempt (0 = never).
+    static unsigned long getLastAttemptMs() { return _lastAttemptMs; }
+
 private:
     WebClientHandler() = delete; // Purely static – prevent instantiation.
+
+    static int           _lastHttpCode;
+    static unsigned long _lastAttemptMs;
 
     // Add a new entry or update the status of an existing one in spaceStatusList.
     static void updateOrInsertStatus(std::vector<SpaceStatusList>& spaceStatusList,

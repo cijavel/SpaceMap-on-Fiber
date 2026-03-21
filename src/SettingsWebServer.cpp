@@ -2,6 +2,7 @@
 #include "AppConfig.h"
 #include "Configuration.h"
 #include "DataSpaceList.h"
+#include "WebClientHandler.h"
 #include <ArduinoJson.h>
 
 // --------------------------------------------------------------------------
@@ -66,6 +67,18 @@ void SettingsWebServer::registerRoutes() {
 
     _server.on("/spacemap/export", HTTP_GET, [this](AsyncWebServerRequest* req) {
         handleSpaceMapExport(req);
+    });
+
+    _server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest* req) {
+        int code = WebClientHandler::getLastHttpCode();
+        unsigned long age = (WebClientHandler::getLastAttemptMs() == 0)
+                            ? 0
+                            : (millis() - WebClientHandler::getLastAttemptMs()) / 1000UL;
+        String json = "{\"httpCode\":" + String(code) +
+                      ",\"ok\":" + (code == 200 ? "true" : "false") +
+                      ",\"ageSec\":" + String(age) +
+                      ",\"url\":\"" + AppConfig::getInstance().getSpaceApiUrl() + "\"}";
+        req->send(200, "application/json", json);
     });
 
     _server.onNotFound([this](AsyncWebServerRequest* req) {
@@ -253,7 +266,46 @@ String SettingsWebServer::buildIndexPage(const String& message) {
     String html = htmlHeader("Overview") + navBar();
     html += "<h1>SpaceMap on Fiber</h1>";
     html += "<p>Welcome to the SpaceMap controller web interface.</p>";
-    html += "<a href='/settings' class='btn-settings'>&#9881; Edit Settings</a>";
+    html += "<div id='apiStatus' style='margin-top:20px;padding:14px 18px;border-radius:6px;"
+            "background:#1a1a1a;border:1px solid #3a3a3a;max-width:480px;'>"
+            "<span style='color:#888;font-size:0.9em'>&#8635; Checking API connection&hellip;</span>"
+            "</div>";
+    html += R"rawjs(
+    <script>
+    function checkApi() {
+        fetch('/api/status')
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+                var box = document.getElementById('apiStatus');
+                var age = d.ageSec > 0 ? ' &mdash; last checked ' + d.ageSec + 's ago' : '';
+                if (d.httpCode === 0) {
+                    box.style.borderColor = '#555';
+                    box.innerHTML = '<span style="font-size:1.1em">&#9711;</span>'
+                        + ' <strong style="color:#aaa">No fetch yet</strong>'
+                        + '<br><small style="color:#777">API URL: ' + d.url + '</small>';
+                } else if (d.ok) {
+                    box.style.borderColor = '#1a7a3c';
+                    box.innerHTML = '<span style="font-size:1.1em">&#9679;</span>'
+                        + ' <strong style="color:#2dbe60">SpaceMap API reachable</strong>'
+                        + age
+                        + '<br><small style="color:#777">HTTP ' + d.httpCode + ' &mdash; ' + d.url + '</small>';
+                } else {
+                    box.style.borderColor = '#c0392b';
+                    box.innerHTML = '<span style="font-size:1.1em">&#9679;</span>'
+                        + ' <strong style="color:#e74c3c">SpaceMap API unreachable</strong>'
+                        + age
+                        + '<br><small style="color:#777">HTTP ' + d.httpCode + ' &mdash; ' + d.url + '</small>';
+                }
+            })
+            .catch(function() {
+                document.getElementById('apiStatus').innerHTML =
+                    '<span style="color:#e74c3c">&#9888; Could not reach device</span>';
+            });
+    }
+    checkApi();
+    setInterval(checkApi, 30000);
+    </script>
+    )rawjs";
     if (message.length() > 0) {
         html += "<div class='msg'>" + message + "</div>";
     }

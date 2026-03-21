@@ -1,5 +1,8 @@
 #include "WebClientHandler.h"
 
+int           WebClientHandler::_lastHttpCode  = 0;
+unsigned long WebClientHandler::_lastAttemptMs = 0;
+
 // --------------------------------------------------------------------------
 // Add a new hackerspace entry or update the status of an existing one.
 // The timestamp is only refreshed when the status actually changes.
@@ -34,7 +37,10 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
     http.begin(client, spaceApiUrl);
     http.useHTTP10(true); // Required for streamed / chunked reading.
 
+    _lastAttemptMs = millis();
     int httpCode = http.GET();
+    _lastHttpCode = httpCode;
+
     if (httpCode != HTTP_CODE_OK) {
         Serial.print(F("HTTP GET failed, code: "));
         Serial.println(httpCode);
