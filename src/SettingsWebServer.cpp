@@ -490,7 +490,13 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
 
     // --- Import area ---
     html += "<h2>Import</h2>"
-            "<p style='color:#bbb;font-size:0.9em'>Paste a <code>SpaceSearchList searchList[]</code> block here and click Import.</p>"
+            "<p style='color:#bbb;font-size:0.9em'>Paste your mapping below and click Import. Expected format:</p>"
+            "<pre style='background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:10px;"
+            "font-size:0.8em;color:#888;overflow-x:auto;margin:0 0 10px 0;'>"
+            "{ 0, \"OpenLab Augsburg\"  , \"Augsburg\"}\n"
+            "{ 1, \"IT-Syndikat\"       , \"Innsbruck\"}\n"
+            "{ 2, \"MuCCC\"             , \"Munich\"}"
+            "</pre>"
             "<textarea id='importArea' rows='8' style='width:100%;background:#1e1e1e;color:#eee;"
             "border:1px solid #3a3a3a;border-radius:4px;padding:7px;font-family:monospace;font-size:0.85em;box-sizing:border-box;'>"
             "</textarea>"
