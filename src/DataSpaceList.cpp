@@ -1,11 +1,12 @@
 #include "DataSpaceList.h"
+#include "AppConfig.h"
 
 // --------------------------------------------------------------------------
-// Static list of hackerspaces to track.
+// Built-in default list of hackerspaces.
 // Each entry maps a LED strip index to a space name and city.
-// Commented-out entries are prepared but currently not wired to a physical LED.
+// This list is used as the factory default when no custom mapping is stored.
 // --------------------------------------------------------------------------
-SpaceSearchList searchList[] = {
+static const SpaceSearchList defaultSearchList[] = {
     { 0, "OpenLab Augsburg"                  , "Augsburg"},
     { 1, "IT-Syndikat"                       , "Innsbruck"},
     { 2, "MuCCC"                             , "Munich"},
@@ -19,27 +20,41 @@ SpaceSearchList searchList[] = {
     {10, "vspace.one"                        , "VS-Villingen"},
     {11, "Nerdberg"                          , "Fuerth"},
     {12, "dezentrale"                        , "Leipzig"},
-   //{13, "shackspace - stuttgart hackerspace", "Stuttgart"},
-   //{14, "temporaerhaus"                     , "Ulm"},
-   //{15, "Chaostreff Bern"                   , "Bern"},
-   //{16, "hacKNology e.V."                   , "Konstanz"},
-   //{17, "CCCFr"                             , "Freiburg im Breisgau"},
-   //{18, "turmlabor"                         , "Dresden"},
-   //{19, "Eigenbaukombinat Halle e.V."       , "Halle (Saale)"},
-   //{20, "Krautspace - Hackspace Jena e.V."  , "Jena"},
-   //{21, "flipdot"                           , "Kassel"},
-   //{22, "CCC Frankfurt"                     , "Frankfurt"},
-   //{23, "Chaostreff Dortmund"               , "Dortmund"},
-   //{24, "Hackerspace Bremen e.V."           , "Bremen"},
-   //{25, "HSBXL"                             , "Brussels"},
 };
+static const int defaultSearchListSize = sizeof(defaultSearchList) / sizeof(defaultSearchList[0]);
+
+// --------------------------------------------------------------------------
+// Lazy-load: fill _list from NVS or fall back to the built-in default.
+// --------------------------------------------------------------------------
+void DataSpaceList::ensureLoaded() {
+    if (_loaded) return;
+
+    uint8_t led[SPACEMAP_MAX_ENTRIES];
+    String  name[SPACEMAP_MAX_ENTRIES];
+    String  city[SPACEMAP_MAX_ENTRIES];
+    int count = AppConfig::getInstance().loadSpaceMap(led, name, city, SPACEMAP_MAX_ENTRIES);
+
+    if (count > 0) {
+        _list.clear();
+        for (int i = 0; i < count; i++) {
+            _list.emplace_back(led[i], name[i], city[i]);
+        }
+    } else {
+        _list.clear();
+        for (int i = 0; i < defaultSearchListSize; i++) {
+            _list.push_back(defaultSearchList[i]);
+        }
+    }
+    _loaded = true;
+}
 
 // --------------------------------------------------------------------------
 // Returns the LED index for the hackerspace with the given name.
 // Returns -1 if the name is not found in the watch list.
 // --------------------------------------------------------------------------
 int DataSpaceList::getLEDforName(String name) {
-    for (const auto& entry : searchList) {
+    ensureLoaded();
+    for (const auto& entry : _list) {
         if (entry.getName() == name) {
             return entry.getLED();
         }
@@ -48,5 +63,33 @@ int DataSpaceList::getLEDforName(String name) {
 }
 
 int DataSpaceList::getNumberofSpacesonwatch() {
-    return sizeof(searchList) / sizeof(searchList[0]);
+    ensureLoaded();
+    return (int)_list.size();
+}
+
+const std::vector<SpaceSearchList>& DataSpaceList::getList() {
+    ensureLoaded();
+    return _list;
+}
+
+void DataSpaceList::saveList(const std::vector<SpaceSearchList>& list) {
+    _list = list;
+    _loaded = true;
+    uint8_t led[SPACEMAP_MAX_ENTRIES];
+    String  name[SPACEMAP_MAX_ENTRIES];
+    String  city[SPACEMAP_MAX_ENTRIES];
+    int count = (int)list.size();
+    if (count > SPACEMAP_MAX_ENTRIES) count = SPACEMAP_MAX_ENTRIES;
+    for (int i = 0; i < count; i++) {
+        led[i]  = (uint8_t)list[i].getLED();
+        name[i] = list[i].getName();
+        city[i] = list[i].city;
+    }
+    AppConfig::getInstance().saveSpaceMap(led, name, city, count);
+}
+
+void DataSpaceList::resetToDefault() {
+    AppConfig::getInstance().resetSpaceMap();
+    _loaded = false; // Force reload from default on next access.
+    ensureLoaded();
 }

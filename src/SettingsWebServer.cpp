@@ -1,6 +1,7 @@
 #include "SettingsWebServer.h"
 #include "AppConfig.h"
 #include "Configuration.h"
+#include "DataSpaceList.h"
 #include <ArduinoJson.h>
 
 // --------------------------------------------------------------------------
@@ -45,6 +46,26 @@ void SettingsWebServer::registerRoutes() {
 
     _server.on("/settings/reset", HTTP_POST, [this](AsyncWebServerRequest* req) {
         handleSettingsReset(req);
+    });
+
+    _server.on("/spacemap", HTTP_GET, [this](AsyncWebServerRequest* req) {
+        handleSpaceMapGet(req);
+    });
+
+    _server.on("/spacemap", HTTP_POST,
+        [this](AsyncWebServerRequest* req) { /* placeholder */ },
+        nullptr,
+        [this](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
+            handleSpaceMapPost(req, data, len, index, total);
+        }
+    );
+
+    _server.on("/spacemap/reset", HTTP_POST, [this](AsyncWebServerRequest* req) {
+        handleSpaceMapReset(req);
+    });
+
+    _server.on("/spacemap/export", HTTP_GET, [this](AsyncWebServerRequest* req) {
+        handleSpaceMapExport(req);
     });
 
     _server.onNotFound([this](AsyncWebServerRequest* req) {
@@ -224,6 +245,7 @@ String SettingsWebServer::navBar() {
     return "<nav>"
            "<a href='/'>&#127968; Overview</a>"
            "<a href='/settings'>&#9881; Settings</a>"
+           "<a href='/spacemap'>&#128280; SpaceMap</a>"
            "</nav><div class='container'>";
 }
 
@@ -285,4 +307,249 @@ String SettingsWebServer::buildSettingsPage(const String& message) {
             "</form>";
 
     return html + htmlFooter();
+}
+
+
+// --------------------------------------------------------------------------
+// /spacemap  – GET: show editor
+// --------------------------------------------------------------------------
+void SettingsWebServer::handleSpaceMapGet(AsyncWebServerRequest* request) {
+    request->send(200, "text/html", buildSpaceMapPage());
+}
+
+// --------------------------------------------------------------------------
+// /spacemap  – POST: save edited list
+// --------------------------------------------------------------------------
+void SettingsWebServer::handleSpaceMapPost(AsyncWebServerRequest* request,
+                                           uint8_t* data, size_t len,
+                                           size_t index, size_t total) {
+    if (index == 0) request->_tempObject = new String();
+    String& body = *reinterpret_cast<String*>(request->_tempObject);
+    body += String((const char*)data, len);
+    if (index + len < total) return;
+    if (!request->_tempObject) return;
+
+    // URL-decode helper (reused pattern from handleSettingsPost)
+    auto urlDecode = [](const String& s) -> String {
+        String result;
+        for (int i = 0; i < (int)s.length(); i++) {
+            if (s[i] == '+') { result += ' '; }
+            else if (s[i] == '%' && i + 2 < (int)s.length()) {
+                char hex[3] = { s[i+1], s[i+2], 0 };
+                result += (char)strtol(hex, nullptr, 16);
+                i += 2;
+            } else {
+                result += s[i];
+            }
+        }
+        return result;
+    };
+
+    // Collect all led[], name[], city[] values from the POST body.
+    // The form sends: led_0=..&name_0=..&city_0=..&led_1=.. etc.
+    std::vector<SpaceSearchList> newList;
+    int idx = 0;
+    while (true) {
+        String ledKey  = "led_"  + String(idx);
+        String nameKey = "name_" + String(idx);
+        String cityKey = "city_" + String(idx);
+
+        auto extractVal = [&](const String& key) -> String {
+            int start = body.indexOf(key + "=");
+            if (start == -1) return "";
+            start += key.length() + 1;
+            int end = body.indexOf("&", start);
+            if (end == -1) end = body.length();
+            return urlDecode(body.substring(start, end));
+        };
+
+        String ledStr = extractVal(ledKey);
+        if (ledStr.length() == 0) break;  // No more entries.
+        String nameStr = extractVal(nameKey);
+        String cityStr = extractVal(cityKey);
+
+        if (nameStr.length() > 0) {
+            uint8_t ledNum = (uint8_t)constrain(ledStr.toInt(), 0, 255);
+            newList.emplace_back(ledNum, nameStr, cityStr);
+        }
+        idx++;
+        if (idx >= SPACEMAP_MAX_ENTRIES) break;
+    }
+
+    DataSpaceList::getInstance().saveList(newList);
+
+    if (request->_tempObject) {
+        delete reinterpret_cast<String*>(request->_tempObject);
+        request->_tempObject = nullptr;
+    }
+
+#ifdef DEBUG
+    Serial.println("WEB: SpaceMap saved via web interface");
+#endif
+    request->send(200, "text/html", buildSpaceMapPage("Mapping saved."));
+}
+
+// --------------------------------------------------------------------------
+// /spacemap/reset  – POST: restore built-in default
+// --------------------------------------------------------------------------
+void SettingsWebServer::handleSpaceMapReset(AsyncWebServerRequest* request) {
+    DataSpaceList::getInstance().resetToDefault();
+#ifdef DEBUG
+    Serial.println("WEB: SpaceMap reset to default");
+#endif
+    request->send(200, "text/html", buildSpaceMapPage("Mapping reset to default."));
+}
+
+// --------------------------------------------------------------------------
+// /spacemap/export  – GET: deliver a .cpp snippet as plain text download
+// --------------------------------------------------------------------------
+void SettingsWebServer::handleSpaceMapExport(AsyncWebServerRequest* request) {
+    const auto& list = DataSpaceList::getInstance().getList();
+    String out = "SpaceSearchList searchList[] = {\n";
+    for (int i = 0; i < (int)list.size(); i++) {
+        char buf[120];
+        snprintf(buf, sizeof(buf), "    {%2d, \"%-40s, \"%s\"}",
+                 list[i].getLED(),
+                 (list[i].getName() + "\"").c_str(),
+                 list[i].city.c_str());
+        out += buf;
+        if (i < (int)list.size() - 1) out += ",";
+        out += "\n";
+    }
+    out += "};\n";
+
+    AsyncWebServerResponse* resp = request->beginResponse(200, "text/plain", out);
+    resp->addHeader("Content-Disposition", "attachment; filename=\"searchList.cpp\"");
+    request->send(resp);
+}
+
+// --------------------------------------------------------------------------
+// Build the /spacemap HTML page
+// --------------------------------------------------------------------------
+String SettingsWebServer::buildSpaceMapPage(const String& message) {
+    const auto& list = DataSpaceList::getInstance().getList();
+    String html = htmlHeader("SpaceMap") + navBar();
+    html += "<h1>LED &#8596; Hackerspace Mapping</h1>";
+
+    if (message.length() > 0) {
+        bool isReset = message.indexOf("reset") >= 0 || message.indexOf("Reset") >= 0;
+        html += "<div class='msg" + String(isReset ? " msg-reset" : "") + "'>" + message + "</div>";
+    }
+
+    // --- Import area ---
+    html += "<h2>Import</h2>"
+            "<p style='color:#bbb;font-size:0.9em'>Paste a <code>SpaceSearchList searchList[]</code> block here and click Import.</p>"
+            "<textarea id='importArea' rows='8' style='width:100%;background:#1e1e1e;color:#eee;"
+            "border:1px solid #3a3a3a;border-radius:4px;padding:7px;font-family:monospace;font-size:0.85em;box-sizing:border-box;'>"
+            "</textarea>"
+            "<button type='button' class='btn btn-save' style='margin-top:8px' onclick='doImport()'>&#8659; Import</button>";
+
+    // --- Editor table ---
+    html += "<h2>Active Mapping</h2>"
+            "<form method='POST' action='/spacemap' id='mapForm'>"
+            "<table id='mapTable' style='width:100%;border-collapse:collapse;margin-top:8px'>"
+            "<thead><tr>"
+            "<th style='text-align:left;padding:6px;color:#f5a800;border-bottom:1px solid #3a3a3a'>LED#</th>"
+            "<th style='text-align:left;padding:6px;color:#f5a800;border-bottom:1px solid #3a3a3a'>Space Name</th>"
+            "<th style='text-align:left;padding:6px;color:#f5a800;border-bottom:1px solid #3a3a3a'>City</th>"
+            "<th style='padding:6px;border-bottom:1px solid #3a3a3a'></th>"
+            "</tr></thead>"
+            "<tbody id='mapBody'>";
+
+    for (int i = 0; i < (int)list.size(); i++) {
+        html += buildSpaceMapRow(i, list[i].getLED(), list[i].getName(), list[i].city);
+    }
+
+    html += "</tbody></table>"
+            "<button type='button' class='btn btn-save' style='background:#1a7a3c;margin-top:12px' onclick='addRow()'>&#43; Add row</button>"
+            "<button type='submit' class='btn btn-save' style='margin-top:12px;margin-left:8px'>&#128190; Save</button>"
+            "</form>";
+
+    // --- Export ---
+    html += "<h2>Export</h2>"
+            "<p style='color:#bbb;font-size:0.9em'>Downloads the current mapping as a <code>searchList.cpp</code> snippet "
+            "ready to paste into <code>DataSpaceList.cpp</code>.</p>"
+            "<a href='/spacemap/export' class='btn btn-save' style='text-decoration:none'>&#8659; Export searchList.cpp</a>";
+
+    // --- Reset ---
+    html += "<h2>Reset</h2>"
+            "<form method='POST' action='/spacemap/reset' "
+            "onsubmit=\"return confirm('Reset mapping to built-in default?')\">"
+            "<button type='submit' class='btn btn-reset'>&#8635; Reset to default</button>"
+            "</form>";
+
+    // --- JavaScript ---
+    html += R"rawjs(
+<script>
+var rowCount = )rawjs" + String(list.size()) + R"rawjs(;
+
+function buildRow(i, led, name, city) {
+    return '<tr id="row_'+i+'">'
+        + '<td style="padding:4px"><input type="number" name="led_'+i+'" value="'+led+'" min="0" max="255" style="width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px"></td>'
+        + '<td style="padding:4px"><input type="text"   name="name_'+i+'" value="'+name+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px"></td>'
+        + '<td style="padding:4px"><input type="text"   name="city_'+i+'" value="'+city+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px"></td>'
+        + '<td style="padding:4px"><button type="button" onclick="removeRow('+i+')" style="background:#e02020;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer">&#10005;</button></td>'
+        + '</tr>';
+}
+
+function addRow() {
+    document.getElementById('mapBody').insertAdjacentHTML('beforeend', buildRow(rowCount, rowCount, '', ''));
+    rowCount++;
+}
+
+function removeRow(i) {
+    var row = document.getElementById('row_'+i);
+    if (row) row.remove();
+    // Re-index remaining rows so the POST fields are contiguous.
+    var rows = document.getElementById('mapBody').querySelectorAll('tr');
+    rowCount = 0;
+    rows.forEach(function(r) {
+        r.id = 'row_' + rowCount;
+        var inputs = r.querySelectorAll('input');
+        var types = ['led_', 'name_', 'city_'];
+        inputs.forEach(function(inp, j) { inp.name = types[j] + rowCount; });
+        rowCount++;
+    });
+}
+
+function doImport() {
+    var raw = document.getElementById('importArea').value;
+    // Extract everything between the first { and the last }
+    var start = raw.indexOf('{');
+    var end   = raw.lastIndexOf('}');
+    if (start === -1 || end === -1) { alert('No valid searchList block found.'); return; }
+    var inner = raw.substring(start + 1, end);
+    // Split on }, { boundaries
+    var entries = inner.split(/\}\s*,\s*\{/);
+    var parsed = [];
+    entries.forEach(function(e) {
+        e = e.replace(/[{}]/g, '').trim();
+        // Format:  led, "name", "city"
+        var m = e.match(/^\s*(\d+)\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*$/);
+        if (m) parsed.push({ led: m[1], name: m[2], city: m[3] });
+    });
+    if (parsed.length === 0) { alert('Could not parse any entries.'); return; }
+    var tbody = document.getElementById('mapBody');
+    tbody.innerHTML = '';
+    rowCount = 0;
+    parsed.forEach(function(p) {
+        tbody.insertAdjacentHTML('beforeend', buildRow(rowCount, p.led, p.name, p.city));
+        rowCount++;
+    });
+    document.getElementById('importArea').value = '';
+}
+</script>
+)rawjs";
+
+    return html + htmlFooter();
+}
+
+// Helper: one table row for the SpaceMap editor.
+String SettingsWebServer::buildSpaceMapRow(int i, int led, const String& name, const String& city) {
+    return "<tr id='row_" + String(i) + "'>"
+           "<td style='padding:4px'><input type='number' name='led_"  + String(i) + "' value='" + String(led)  + "' min='0' max='255' style='width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px'></td>"
+           "<td style='padding:4px'><input type='text'   name='name_" + String(i) + "' value='" + name        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px'></td>"
+           "<td style='padding:4px'><input type='text'   name='city_" + String(i) + "' value='" + city        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px'></td>"
+           "<td style='padding:4px'><button type='button' onclick='removeRow(" + String(i) + ")' style='background:#e02020;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer'>&#10005;</button></td>"
+           "</tr>";
 }

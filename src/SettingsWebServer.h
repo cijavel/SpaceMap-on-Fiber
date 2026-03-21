@@ -27,13 +27,19 @@ private:
 
     void registerRoutes();
 
-    // Route handlers
+     // Route handlers
     void handleIndex(AsyncWebServerRequest* request);
     void handleSettingsGet(AsyncWebServerRequest* request);
     void handleSettingsPost(AsyncWebServerRequest* request,
                             uint8_t* data, size_t len,
                             size_t index, size_t total);
     void handleSettingsReset(AsyncWebServerRequest* request);
+    void handleSpaceMapGet(AsyncWebServerRequest* request);
+    void handleSpaceMapPost(AsyncWebServerRequest* request,
+                            uint8_t* data, size_t len,
+                            size_t index, size_t total);
+    void handleSpaceMapReset(AsyncWebServerRequest* request);
+    void handleSpaceMapExport(AsyncWebServerRequest* request);
     void handleNotFound(AsyncWebServerRequest* request);
     void handleHttpsRedirect(AsyncWebServerRequest* request);
 
@@ -41,6 +47,7 @@ private:
     static String buildIndexPage(const String& message = "");
     static String buildSettingsPage(const String& message = "");
     static String buildSpaceMapPage(const String& message = "");
+    static String buildSpaceMapRow(int i, int led, const String& name, const String& city);
     static String htmlHeader(const String& title);
     static String htmlFooter();
     static String navBar();

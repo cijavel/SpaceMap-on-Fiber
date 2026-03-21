@@ -24,6 +24,17 @@ public:
     // Reset all values to the compile-time defaults from Configuration.h and save.
     void resetToDefaults();
 
+    // --- SpaceMap list (LED <-> Hackerspace mapping) ---
+    // Loads the custom mapping from NVS into dst. Returns the number of entries loaded.
+    // Returns 0 if no custom mapping is stored (caller should fall back to the built-in default).
+    int  loadSpaceMap(uint8_t* ledOut, String* nameOut, String* cityOut, int maxEntries);
+
+    // Persists a custom mapping to NVS. Pass the three parallel arrays and their count.
+    void saveSpaceMap(const uint8_t* led, const String* name, const String* city, int count);
+
+    // Removes the custom mapping from NVS so the built-in default is used again.
+    void resetSpaceMap();
+
     // --- Getters ---
     unsigned long getIntervalWifiCheck()  const { return _intervalWifiCheck; }
     unsigned long getIntervalLEDs()       const { return _intervalLEDs; }

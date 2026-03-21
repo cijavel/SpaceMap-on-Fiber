@@ -41,6 +41,45 @@ void AppConfig::save() {
     _prefs.end();
 }
 
+// --------------------------------------------------------------------------
+// SpaceMap persistence
+// --------------------------------------------------------------------------
+int AppConfig::loadSpaceMap(uint8_t* ledOut, String* nameOut, String* cityOut, int maxEntries) {
+    if (!_prefs.begin(NVS_NAMESPACE, /*readOnly=*/true)) return 0;
+    int count = (int)_prefs.getInt("smCount", 0);
+    if (count <= 0 || count > maxEntries) { _prefs.end(); return 0; }
+    for (int i = 0; i < count; i++) {
+        ledOut[i]  = (uint8_t)_prefs.getInt(("smL" + String(i)).c_str(), 0);
+        nameOut[i] = _prefs.getString(("smN" + String(i)).c_str(), "");
+        cityOut[i] = _prefs.getString(("smC" + String(i)).c_str(), "");
+    }
+    _prefs.end();
+    return count;
+}
+
+void AppConfig::saveSpaceMap(const uint8_t* led, const String* name, const String* city, int count) {
+    if (!_prefs.begin(NVS_NAMESPACE, /*readOnly=*/false)) return;
+    _prefs.putInt("smCount", count);
+    for (int i = 0; i < count; i++) {
+        _prefs.putInt(("smL" + String(i)).c_str(), led[i]);
+        _prefs.putString(("smN" + String(i)).c_str(), name[i]);
+        _prefs.putString(("smC" + String(i)).c_str(), city[i]);
+    }
+    _prefs.end();
+}
+
+void AppConfig::resetSpaceMap() {
+    if (!_prefs.begin(NVS_NAMESPACE, /*readOnly=*/false)) return;
+    int count = (int)_prefs.getInt("smCount", 0);
+    _prefs.remove("smCount");
+    for (int i = 0; i < count; i++) {
+        _prefs.remove(("smL" + String(i)).c_str());
+        _prefs.remove(("smN" + String(i)).c_str());
+        _prefs.remove(("smC" + String(i)).c_str());
+    }
+    _prefs.end();
+}
+
 void AppConfig::resetToDefaults() {
     _intervalWifiCheck = interval_in_Seconds_WiFiCheck;
     _intervalLEDs      = interval_in_Seconds_LEDs;
