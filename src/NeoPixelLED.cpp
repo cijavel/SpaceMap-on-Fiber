@@ -30,14 +30,13 @@ void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus) {
         return;
     }
     for (const auto& item : spacestatus) {
-        RgbColor color;
         uint8_t brightness = AppConfig::getInstance().getLedBrightness();
         RgbColor color = setBrightness(cblack, brightness);
         switch (item.getStatus()) {
             case SpaceStatus::OPEN:    color = setBrightness(copen,    brightness); break;
             case SpaceStatus::CLOSED:  color = setBrightness(cclosed,  brightness); break;
             case SpaceStatus::UNKNOWN: color = setBrightness(cunknown, brightness); break;
-            default:                                                                 break;
+            default:                   color = setBrightness(cblack,   brightness); break;
         }
         strip.SetPixelColor(item.getLED(), color);
     }

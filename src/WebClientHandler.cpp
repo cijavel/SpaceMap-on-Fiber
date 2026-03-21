@@ -80,8 +80,6 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList> &spaceStatusV
         }
         modifyStatus(spaceStatusVector, led, spaceName, status);
 
-        modifyStatus(spaceStatusVector, led, spaceName, status);
-
     } while (payload.findUntil(",", "]"));
 
     http.end();
