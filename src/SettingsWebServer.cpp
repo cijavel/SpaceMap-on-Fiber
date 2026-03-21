@@ -100,23 +100,35 @@ void SettingsWebServer::handleSettingsPost(AsyncWebServerRequest* request,
     String apiUrl = getValue("apiUrl");
     if (apiUrl.length() > 0)           cfg.setSpaceApiUrl(apiUrl);
 
-    String wifiInt = getValue("wifiInterval");
-    if (wifiInt.length() > 0)          cfg.setIntervalWifiCheck(wifiInt.toInt());
+    // Hilfslambda: nur setzen wenn > 0 und parsbar (toInt() gibt 0 bei Fehler)
+    auto applyULong = [](const String& s, unsigned long minVal, unsigned long maxVal,
+                         std::function<void(unsigned long)> setter) {
+        if (s.length() == 0) return;
+        long v = s.toInt();
+        if (v > 0 && (unsigned long)v >= minVal && (unsigned long)v <= maxVal)
+            setter((unsigned long)v);
+    };
+    auto applyUInt8 = [](const String& s, std::function<void(uint8_t)> setter) {
+        if (s.length() == 0) return;
+        int v = s.toInt();
+        if (v >= 0 && v <= 255) setter((uint8_t)v);
+    };
+    auto applyUInt16 = [](const String& s, uint16_t minVal, uint16_t maxVal,
+                          std::function<void(uint16_t)> setter) {
+        if (s.length() == 0) return;
+        int v = s.toInt();
+        if (v >= minVal && v <= maxVal) setter((uint16_t)v);
+    };
 
-    String ledInt = getValue("ledInterval");
-    if (ledInt.length() > 0)           cfg.setIntervalLEDs(ledInt.toInt());
+    applyULong(getValue("wifiInterval"),        30,   86400, [&](unsigned long v){ cfg.setIntervalWifiCheck(v); });
+    applyULong(getValue("ledInterval"),          1,    3600, [&](unsigned long v){ cfg.setIntervalLEDs(v); });
+    applyULong(getValue("apiInterval"),         10,    3600, [&](unsigned long v){ cfg.setIntervalApi(v); });
+    applyUInt8(getValue("ledBrightness"),              [&](uint8_t v){ cfg.setLedBrightness(v); });
+    applyUInt8(getValue("onboardBrightness"),          [&](uint8_t v){ cfg.setOnboardBrightness(v); });
+    applyUInt16(getValue("ledMaxPower"),   100,  5000, [&](uint16_t v){ cfg.setLedMaxPowerMa(v); });
 
-    String apiInt = getValue("apiInterval");
-    if (apiInt.length() > 0)           cfg.setIntervalApi(apiInt.toInt());
-
-    String ledBright = getValue("ledBrightness");
-    if (ledBright.length() > 0)        cfg.setLedBrightness((uint8_t)ledBright.toInt());
-
-    String obBright = getValue("onboardBrightness");
-    if (obBright.length() > 0)         cfg.setOnboardBrightness((uint8_t)obBright.toInt());
-
-    String maxPwr = getValue("ledMaxPower");
-    if (maxPwr.length() > 0)           cfg.setLedMaxPowerMa((uint16_t)maxPwr.toInt());
+    String apiUrl = getValue("apiUrl");
+    if (apiUrl.length() > 0) cfg.setSpaceApiUrl(apiUrl);
 
     cfg.save();
 
