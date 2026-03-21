@@ -36,17 +36,9 @@ void SettingsWebServer::registerRoutes() {
         handleSettingsGet(req);
     });
 
-    // Body callback accumulates chunks; onRequest fires once the full body is ready.
-    _server.on("/settings", HTTP_POST,
-        [this](AsyncWebServerRequest* req) {
-            handleSettingsPost(req);
-        },
-        nullptr,
-        [](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
-            if (index == 0) req->_tempObject = new String();
-            *reinterpret_cast<String*>(req->_tempObject) += String((const char*)data, len);
-        }
-    );
+    _server.on("/settings", HTTP_POST, [this](AsyncWebServerRequest* req) {
+        handleSettingsPost(req);
+    });
 
     _server.on("/settings/reset", HTTP_POST, [this](AsyncWebServerRequest* req) {
         handleSettingsReset(req);
@@ -56,17 +48,9 @@ void SettingsWebServer::registerRoutes() {
         handleSpaceMapGet(req);
     });
 
-    _server.on("/spacemap", HTTP_POST,
-        [this](AsyncWebServerRequest* req) {
-            handleSpaceMapPost(req);
-        },
-        nullptr,
-        [](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
-            if (index == 0) req->_tempObject = new String();
-            *reinterpret_cast<String*>(req->_tempObject) += String((const char*)data, len);
-        }
-    );
-
+    _server.on("/spacemap", HTTP_POST, [this](AsyncWebServerRequest* req) {
+        handleSpaceMapPost(req);
+    });
     _server.on("/spacemap/reset", HTTP_POST, [this](AsyncWebServerRequest* req) {
         handleSpaceMapReset(req);
     });
@@ -104,40 +88,14 @@ void SettingsWebServer::handleSettingsGet(AsyncWebServerRequest* request) {
 }
 
 void SettingsWebServer::handleSettingsPost(AsyncWebServerRequest* request) {
-    if (!request->_tempObject) {
-        request->send(400, "text/html", buildSettingsPage("Error: empty request body."));
-        return;
-    }
-    String& body = *reinterpret_cast<String*>(request->_tempObject);
-
     AppConfig& cfg = AppConfig::getInstance();
 
-    // Parse a single URL-encoded form field from the request body.
-    auto getValue = [&](const String& key) -> String {
-        int start = body.indexOf(key + "=");
-        if (start == -1) return "";
-        start += key.length() + 1;
-        int end = body.indexOf("&", start);
-        if (end == -1) end = body.length();
-
-        String encodedValue = body.substring(start, end);
-
-        // URL-decode: replace '+' with space and '%XX' sequences with their characters.
-        encodedValue.replace("+", " ");
-        String decodedValue = "";
-        for (int i = 0; i < (int)encodedValue.length(); i++) {
-            if (encodedValue[i] == '%' && i + 2 < (int)encodedValue.length()) {
-                char hex[3] = { encodedValue[i+1], encodedValue[i+2], 0 };
-                decodedValue += (char)strtol(hex, nullptr, 16);
-                i += 2;
-            } else {
-                decodedValue += encodedValue[i];
-            }
-        }
-        return decodedValue;
+    // Read POST parameters directly – ESPAsyncWebServer parses URL-encoded bodies automatically.
+    auto getParam = [&](const String& key) -> String {
+        if (!request->hasParam(key, true)) return "";
+        return request->getParam(key, true)->value();
     };
 
-    // Helper: apply a parsed unsigned long only if it is within [minVal, maxVal].
     auto applyULong = [](const String& s, unsigned long minVal, unsigned long maxVal,
                          std::function<void(unsigned long)> setter) {
         if (s.length() == 0) return;
@@ -146,14 +104,12 @@ void SettingsWebServer::handleSettingsPost(AsyncWebServerRequest* request) {
             setter((unsigned long)value);
     };
 
-    // Helper: apply a parsed uint8_t only if it is within [0, 255].
     auto applyUInt8 = [](const String& s, std::function<void(uint8_t)> setter) {
         if (s.length() == 0) return;
         int value = s.toInt();
         if (value >= 0 && value <= 255) setter((uint8_t)value);
     };
 
-    // Helper: apply a parsed uint16_t only if it is within [minVal, maxVal].
     auto applyUInt16 = [](const String& s, uint16_t minVal, uint16_t maxVal,
                           std::function<void(uint16_t)> setter) {
         if (s.length() == 0) return;
@@ -161,23 +117,17 @@ void SettingsWebServer::handleSettingsPost(AsyncWebServerRequest* request) {
         if (value >= minVal && value <= maxVal) setter((uint16_t)value);
     };
 
-    String apiUrl = getValue("apiUrl");
+    String apiUrl = getParam("apiUrl");
     if (apiUrl.length() > 0) cfg.setSpaceApiUrl(apiUrl);
 
-    applyULong(getValue("wifiInterval"),     30,   86400, [&](unsigned long value){ cfg.setIntervalWifiCheck(value); });
-    applyULong(getValue("ledInterval"),       1,    3600, [&](unsigned long value){ cfg.setIntervalLEDs(value); });
-    applyULong(getValue("apiInterval"),      10,    3600, [&](unsigned long value){ cfg.setIntervalApi(value); });
-    applyUInt8(getValue("ledBrightness"),              [&](uint8_t value){ cfg.setLedBrightness(value); });
-    applyUInt8(getValue("onboardBrightness"),          [&](uint8_t value){ cfg.setOnboardBrightness(value); });
-    applyUInt16(getValue("ledMaxPower"), 100,  5000, [&](uint16_t value){ cfg.setLedMaxPowerMa(value); });
+    applyULong(getParam("wifiInterval"),    30,   86400, [&](unsigned long v){ cfg.setIntervalWifiCheck(v); });
+    applyULong(getParam("ledInterval"),      1,    3600, [&](unsigned long v){ cfg.setIntervalLEDs(v); });
+    applyULong(getParam("apiInterval"),     10,    3600, [&](unsigned long v){ cfg.setIntervalApi(v); });
+    applyUInt8(getParam("ledBrightness"),              [&](uint8_t v){ cfg.setLedBrightness(v); });
+    applyUInt8(getParam("onboardBrightness"),          [&](uint8_t v){ cfg.setOnboardBrightness(v); });
+    applyUInt16(getParam("ledMaxPower"), 100, 5000,    [&](uint16_t v){ cfg.setLedMaxPowerMa(v); });
 
     cfg.save();
-
-    // Release the temporary body buffer.
-    if (request->_tempObject) {
-        delete reinterpret_cast<String*>(request->_tempObject);
-        request->_tempObject = nullptr;
-    }
 
 #ifdef DEBUG
     Serial.println("WEB: Settings saved via web interface");
@@ -375,63 +325,28 @@ void SettingsWebServer::handleSpaceMapGet(AsyncWebServerRequest* request) {
 // /spacemap  – POST: save edited list
 // --------------------------------------------------------------------------
 void SettingsWebServer::handleSpaceMapPost(AsyncWebServerRequest* request) {
-    String body = request->_tempObject
-                  ? *reinterpret_cast<String*>(request->_tempObject)
-                  : String("");
-
-    // URL-decode helper (reused pattern from handleSettingsPost)
-    auto urlDecode = [](const String& s) -> String {
-        String result;
-        for (int i = 0; i < (int)s.length(); i++) {
-            if (s[i] == '+') { result += ' '; }
-            else if (s[i] == '%' && i + 2 < (int)s.length()) {
-                char hex[3] = { s[i+1], s[i+2], 0 };
-                result += (char)strtol(hex, nullptr, 16);
-                i += 2;
-            } else {
-                result += s[i];
-            }
-        }
-        return result;
-    };
-
-    // Collect all led[], name[], city[] values from the POST body.
-    // The form sends: led_0=..&name_0=..&city_0=..&led_1=.. etc.
+    // ESPAsyncWebServer parses URL-encoded bodies automatically – use getParam() directly.
     std::vector<SpaceSearchList> newList;
     int idx = 0;
-    while (true) {
+    while (idx < SPACEMAP_MAX_ENTRIES) {
         String ledKey  = "led_"  + String(idx);
         String nameKey = "name_" + String(idx);
         String cityKey = "city_" + String(idx);
 
-        auto extractVal = [&](const String& key) -> String {
-            int start = body.indexOf(key + "=");
-            if (start == -1) return "";
-            start += key.length() + 1;
-            int end = body.indexOf("&", start);
-            if (end == -1) end = body.length();
-            return urlDecode(body.substring(start, end));
-        };
+        if (!request->hasParam(ledKey, true)) break;  // No more entries.
 
-        String ledStr = extractVal(ledKey);
-        if (ledStr.length() == 0) break;  // No more entries.
-        String nameStr = extractVal(nameKey);
-        String cityStr = extractVal(cityKey);
+        String ledStr  = request->getParam(ledKey,  true)->value();
+        String nameStr = request->hasParam(nameKey, true) ? request->getParam(nameKey, true)->value() : "";
+        String cityStr = request->hasParam(cityKey, true) ? request->getParam(cityKey, true)->value() : "";
 
         if (nameStr.length() > 0) {
             uint8_t ledNum = (uint8_t)constrain(ledStr.toInt(), 0, 255);
             newList.emplace_back(ledNum, nameStr, cityStr);
         }
         idx++;
-        if (idx >= SPACEMAP_MAX_ENTRIES) break;
     }
 
     DataSpaceList::getInstance().saveList(newList);
-
-    if (request->_tempObject) {
-        delete reinterpret_cast<String*>(request->_tempObject);
-        request->_tempObject = nullptr;
-    }
 
 #ifdef DEBUG
     Serial.println("WEB: SpaceMap saved via web interface");
