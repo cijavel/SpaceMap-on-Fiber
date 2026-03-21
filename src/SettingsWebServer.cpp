@@ -231,9 +231,7 @@ String SettingsWebServer::buildIndexPage(const String& message) {
     String html = htmlHeader("Overview") + navBar();
     html += "<h1>SpaceMap on Fiber</h1>";
     html += "<p>Welcome to the SpaceMap controller web interface.</p>";
-    html += "<ul>"
-            "<li><a href='/settings'>&#9881; Edit settings</a></li>"
-            "</ul>";
+    html += "<a href='/settings' class='btn-settings'>&#9881; Edit Settings</a>";
     if (message.length() > 0) {
         html += "<div class='msg'>" + message + "</div>";
     }
