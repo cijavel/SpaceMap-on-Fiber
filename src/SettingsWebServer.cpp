@@ -405,10 +405,10 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
             "<button type='button' class='btn btn-save' style='margin-top:8px' onclick='doImport()'>&#8659; Import</button>";
 
     // --- Editor table ---
-    html += "<h2>Active Mapping</h2>"
-            "<form method='POST' action='/spacemap' id='mapForm'>"
+    html += "<style>input.led-input::-webkit-outer-spin-button,input.led-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}</style>"
             "<table id='mapTable' style='width:100%;border-collapse:collapse;margin-top:8px'>"
             "<thead><tr>"
+            "<th style='padding:6px;border-bottom:1px solid #3a3a3a;width:24px'></th>"
             "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a'>LED#</th>"
             "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a'>Space Name</th>"
             "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a'>City</th>"
@@ -423,8 +423,9 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
     html += "</tbody></table>"
             "<div style='margin-top:12px;display:flex;align-items:center;flex-wrap:wrap;gap:10px'>"
             "<button type='button' class='btn btn-save' style='background:#1a7a3c;margin:0' onclick='addRow()'>&#43; Add row</button>"
-            "<button type='submit' class='btn btn-save' style='margin:0'>&#128190; Save</button>";
-    if (message.length() > 0) {
+            "<button type='submit' class='btn btn-save' style='margin:0' id='saveBtn'>&#128190; Save</button>"
+            "<div id='dupWarn' style='display:none;padding:6px 14px;border-radius:4px;font-weight:bold;background:#2e0e0e;color:#e74c3c;width:100%'></div>";
+             if (message.length() > 0) {
         bool isReset = message.indexOf("eset") >= 0;
         bool isError = message.indexOf("rror") >= 0;
         String color = isError ? "#f88" : "#6fcf6f";
@@ -453,8 +454,9 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
 var rowCount = )rawjs" + String(list.size()) + R"rawjs(;
 
 function buildRow(i, led, name, city) {
-    return '<tr id="row_'+i+'">'
-        + '<td style="padding:4px"><input type="number" name="led_'+i+'" value="'+led+'" min="0" max="255" style="width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px"></td>'
+    return '<tr id="row_'+i+'" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragend="onDragEnd(event)" style="cursor:grab">'
+        + '<td style="padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
+        + '<td style="padding:4px"><input type="number" name="led_'+i+'" value="'+led+'" min="0" max="255" style="width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px;-moz-appearance:textfield" class="led-input" onchange="onLedChanged(this)"></td>'
         + '<td style="padding:4px"><input type="text"   name="name_'+i+'" value="'+name+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px"></td>'
         + '<td style="padding:4px"><input type="text"   name="city_'+i+'" value="'+city+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px"></td>'
         + '<td style="padding:4px"><button type="button" onclick="removeRow('+i+')" style="background:#f5a800;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer">&#10005;</button></td>'
@@ -483,14 +485,15 @@ function removeRow(i) {
 
 function doImport() {
     var raw = document.getElementById('importArea').value;
-    // Split on every { ... } block
     var parsed = [];
     var re = /\{\s*(\d+)\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\}/g;
     var m;
     while ((m = re.exec(raw)) !== null) {
-        parsed.push({ led: m[1], name: m[2], city: m[3] });
+        parsed.push({ led: parseInt(m[1], 10), name: m[2], city: m[3] });
     }
     if (parsed.length === 0) { alert('Could not parse any entries.\nExpected format:\n{ 0, "Name", "City"}, { 1, "Name", "City"}'); return; }
+    // Sort imported entries by LED# before inserting
+    parsed.sort(function(a, b) { return a.led - b.led; });
     var tbody = document.getElementById('mapBody');
     tbody.innerHTML = '';
     rowCount = 0;
@@ -500,6 +503,121 @@ function doImport() {
     });
     document.getElementById('importArea').value = '';
 }
+
+// ---- LED# change handler: resolve collisions then sort ----
+function onLedChanged(inp) {
+    var newVal = parseInt(inp.value, 10);
+    if (isNaN(newVal) || newVal < 0) { inp.value = 0; newVal = 0; }
+    if (newVal > 255) { inp.value = 255; newVal = 255; }
+
+    // Cascade: if newVal is taken by another input, bump that one up
+    var inputs = Array.from(document.querySelectorAll('#mapBody input.led-input'));
+    var changed = true;
+    while (changed) {
+        changed = false;
+        var seen = {};
+        inputs.forEach(function(other) {
+            var v = parseInt(other.value, 10);
+            if (other === inp) return;
+            if (seen[v] !== undefined) {
+                // bump this duplicate up by 1
+                other.value = v + 1;
+                changed = true;
+            }
+            seen[v] = other;
+        });
+        // also check against inp's current value
+        inputs.forEach(function(other) {
+            if (other === inp) return;
+            if (parseInt(other.value, 10) === newVal) {
+                other.value = parseInt(other.value, 10) + 1;
+                changed = true;
+            }
+        });
+        // re-read inputs after changes
+        inputs = Array.from(document.querySelectorAll('#mapBody input.led-input'));
+    }
+
+    sortTableByLed();
+    reindexRows();
+}
+
+// ---- Sort table rows by LED# value ----
+function sortTableByLed() {
+    var tbody = document.getElementById('mapBody');
+    var rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort(function(a, b) {
+        var aVal = parseInt(a.querySelector('input.led-input').value, 10);
+        var bVal = parseInt(b.querySelector('input.led-input').value, 10);
+        return aVal - bVal;
+    });
+    rows.forEach(function(r) { tbody.appendChild(r); });
+    reindexRows();
+}
+
+// ---- Drag & Drop reorder ----
+var dragSrc = null;
+
+function onDragStart(e) {
+    dragSrc = e.currentTarget;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+    setTimeout(function() { dragSrc.style.opacity = '0.4'; }, 0);
+}
+
+function onDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    var target = e.currentTarget;
+    if (target !== dragSrc) {
+        target.style.borderTop = '2px solid #1a7a3c';
+    }
+}
+
+function onDrop(e) {
+    e.preventDefault();
+    var target = e.currentTarget;
+    target.style.borderTop = '';
+    if (dragSrc && target !== dragSrc) {
+        var tbody = document.getElementById('mapBody');
+        var rows  = Array.from(tbody.querySelectorAll('tr'));
+        var fromIdx = rows.indexOf(dragSrc);
+        var toIdx   = rows.indexOf(target);
+        if (fromIdx < toIdx) {
+            tbody.insertBefore(dragSrc, target.nextSibling);
+        } else {
+            tbody.insertBefore(dragSrc, target);
+        }
+        // Reassign all LED numbers by position after drag
+        var allRows = Array.from(tbody.querySelectorAll('tr'));
+        allRows.forEach(function(r, idx) {
+            var ledInp = r.querySelector('input.led-input');
+            if (ledInp) ledInp.value = idx;
+        });
+        reindexRows();
+    }
+}
+
+function onDragEnd(e) {
+    e.currentTarget.style.opacity = '';
+    document.querySelectorAll('#mapBody tr').forEach(function(r) {
+        r.style.borderTop = '';
+    });
+}
+
+function reindexRows() {
+    var rows = document.getElementById('mapBody').querySelectorAll('tr');
+    rowCount = 0;
+    rows.forEach(function(r) {
+        r.id = 'row_' + rowCount;
+        var inputs = r.querySelectorAll('input');
+        var types = ['led_', 'name_', 'city_'];
+        inputs.forEach(function(inp, j) { inp.name = types[j] + rowCount; });
+        var btn = r.querySelector('button');
+        if (btn) btn.setAttribute('onclick', 'removeRow(' + rowCount + ')');
+        rowCount++;
+    });
+}
 </script>
 )rawjs";
 
@@ -508,8 +626,9 @@ function doImport() {
 
 // Helper: one table row for the SpaceMap editor.
 String SettingsWebServer::buildSpaceMapRow(int i, int led, const String& name, const String& city) {
-    return "<tr id='row_" + String(i) + "'>"
-           "<td style='padding:4px'><input type='number' name='led_"  + String(i) + "' value='" + String(led)  + "' min='0' max='255' style='width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px'></td>"
+    return "<tr id='row_" + String(i) + "' draggable='true' ondragstart='onDragStart(event)' ondragover='onDragOver(event)' ondrop='onDrop(event)' ondragend='onDragEnd(event)' style='cursor:grab'>"
+           "<td style='padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab' title='Drag to reorder'>&#8597;</td>"
+           "<td style='padding:4px'><input type='number' name='led_"  + String(i) + "' value='" + String(led)  + "' min='0' max='255' style='width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px;-moz-appearance:textfield' class='led-input' onchange='onLedChanged(this)'></td>"
            "<td style='padding:4px'><input type='text'   name='name_" + String(i) + "' value='" + name        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px'></td>"
            "<td style='padding:4px'><input type='text'   name='city_" + String(i) + "' value='" + city        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px'></td>"
            "<td style='padding:4px'><button type='button' onclick='removeRow(" + String(i) + ")' style='background:#f5a800;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer'>&#10005;</button></td>"
