@@ -111,9 +111,6 @@ void SettingsWebServer::handleSettingsPost(AsyncWebServerRequest* request,
     String obBright = getValue("onboardBrightness");
     if (obBright.length() > 0)         cfg.setOnboardBrightness((uint8_t)obBright.toInt());
 
-    String ledCount = getValue("ledCount");
-    if (ledCount.length() > 0)         cfg.setLedCount((uint16_t)ledCount.toInt());
-
     String maxPwr = getValue("ledMaxPower");
     if (maxPwr.length() > 0)           cfg.setLedMaxPowerMa((uint16_t)maxPwr.toInt());
 
@@ -230,13 +227,10 @@ String SettingsWebServer::buildSettingsPage(const String& message) {
     html += "<label>Onboard-LED-Helligkeit (0–255)</label>"
             "<input type='number' name='onboardBrightness' min='0' max='255' value='" +
             String(cfg.getOnboardBrightness()) + "'>";
-    html += "<label>Anzahl LEDs</label>"
-            "<input type='number' name='ledCount' min='1' max='500' value='" +
-            String(cfg.getLedCount()) + "'>";
     html += "<label>Max. Stromverbrauch LEDs (mA)</label>"
             "<input type='number' name='ledMaxPower' min='100' max='5000' value='" +
             String(cfg.getLedMaxPowerMa()) + "'>";
-
+            
     html += "<br><button type='submit' class='btn btn-save'>&#128190; Speichern</button>";
     html += "</form>";
 

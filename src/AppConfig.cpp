@@ -11,8 +11,6 @@ void AppConfig::load() {
     _spaceApiUrl        = _prefs.getString("apiUrl",       webpage_SpaceAPI);
     _ledBrightness      = _prefs.getUChar("ledBright",     LED_BRIGHTNESS);
     _onboardBrightness  = _prefs.getUChar("obBright",      ONBOARD_BRIGHTNESS);
-    _ledCount           = _prefs.getUShort("ledCount",     LED_COUNT);
-    _ledDataPin         = _prefs.getUChar("ledPin",        LED_DATA_PIN);
     _ledMaxPowerMa      = _prefs.getUShort("ledMaxPwr",    LED_MAX_POWER_MILLIAMPS);
 
     _prefs.end();
@@ -27,8 +25,6 @@ void AppConfig::save() {
     _prefs.putString("apiUrl",      _spaceApiUrl);
     _prefs.putUChar("ledBright",    _ledBrightness);
     _prefs.putUChar("obBright",     _onboardBrightness);
-    _prefs.putUShort("ledCount",    _ledCount);
-    _prefs.putUChar("ledPin",       _ledDataPin);
     _prefs.putUShort("ledMaxPwr",   _ledMaxPowerMa);
 
     _prefs.end();
@@ -41,8 +37,6 @@ void AppConfig::resetToDefaults() {
     _spaceApiUrl        = webpage_SpaceAPI;
     _ledBrightness      = LED_BRIGHTNESS;
     _onboardBrightness  = ONBOARD_BRIGHTNESS;
-    _ledCount           = LED_COUNT;
-    _ledDataPin         = LED_DATA_PIN;
     _ledMaxPowerMa      = LED_MAX_POWER_MILLIAMPS;
     save();  // direkt in NVS schreiben
 }
