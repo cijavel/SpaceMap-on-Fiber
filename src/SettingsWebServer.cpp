@@ -443,7 +443,7 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
     html += "<h2>Export</h2>"
             "<p style='color:#bbb;font-size:0.9em'>Downloads the current mapping as a <code>searchList.cpp</code> snippet "
             "ready to paste into <code>DataSpaceList.cpp</code>.</p>"
-            "<a href='/spacemap/export' class='btn btn-save' style='text-decoration:none'>&#8659; Export searchList.txt</a>";
+            "<button type='button' class='btn btn-save' onclick='doExport()'>&#8659; Export searchList.txt</button>";
 
     // --- Reset ---
     html += "<h2>Reset</h2>"
@@ -468,7 +468,8 @@ function buildRow(i, led, name, city) {
 }
 
 function markRowDirty(row) {
-    row.style.borderLeft = '3px solid #1a7a3c';
+    row.style.background = '#0d1f0d';
+    row.style.outline = '1px solid #1a7a3c';
     var msg = document.getElementById('saveMsg');
     if (msg) msg.style.display = 'none';
 }
@@ -618,6 +619,28 @@ function onDragEnd(e) {
     });
 }
 
+function doExport() {
+    var rows = document.getElementById('mapBody').querySelectorAll('tr');
+    var parts = [];
+    rows.forEach(function(r) {
+        var led  = r.querySelector('input.led-input').value;
+        var name = r.querySelectorAll('input')[1].value;
+        var city = r.querySelectorAll('input')[2].value;
+        if (name.length > 0) {
+            parts.push('{ ' + led + ', "' + name + '", "' + city + '"}');
+        }
+    });
+    var content = parts.join(', ') + '\n';
+    var blob = new Blob([content], { type: 'text/plain' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'searchList.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+}
+
 function reindexRows() {
     var rows = document.getElementById('mapBody').querySelectorAll('tr');
     rowCount = 0;
@@ -642,7 +665,8 @@ String SettingsWebServer::buildSpaceMapRow(int i, int led, const String& name, c
     return "<tr id='row_" + String(i) + "' draggable='true' ondragstart='onDragStart(event)' ondragover='onDragOver(event)' ondrop='onDrop(event)' ondragend='onDragEnd(event)' style='cursor:grab'>"
            "<td style='padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab' title='Drag to reorder'>&#8597;</td>"
            "<td style='padding:4px'><input type='number' name='led_"  + String(i) + "' value='" + String(led)  + "' min='0' max='255' style='width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px;-moz-appearance:textfield' class='led-input' onchange='onLedChanged(this)'></td>"
-           "<td style='padding:4px'><input type='text'   name='name_" + String(i) + "' value='" + name        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px' oninput='markRowDirty(this.closest(String.fromCharCode(116,114)))'></td>"
-           "<td style='padding:4px'><input type='text'   name='city_" + String(i) + "' value='" + city        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px' oninput='markRowDirty(this.closest(String.fromCharCode(116,114)))'></td>"
+           "<td style='padding:4px'><input type='text'   name='name_" + String(i) + "' value='" + name        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px' oninput='markRowDirty(this.closest(\"tr\"))'></td>"
+           "<td style='padding:4px'><input type='text'   name='city_" + String(i) + "' value='" + city        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px' oninput='markRowDirty(this.closest(\"tr\"))'></td>"
+           "<td style='padding:4px'><button type='button' onclick='removeRow(" + String(i) + ")' style='background:#f5a800;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer'>&#10005;</button></td>"
            "</tr>";
 }
