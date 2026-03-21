@@ -60,10 +60,9 @@ void SettingsWebServer::handleSettingsGet(AsyncWebServerRequest* request) {
 void SettingsWebServer::handleSettingsPost(AsyncWebServerRequest* request,
                                            uint8_t* data, size_t len,
                                            size_t index, size_t total) {
-    // Body als String zusammensetzen (body kommt ggf. in Chunks)
-    static String body;
-    if (index == 0) body = "";
-    body += String((char*)data).substring(0, len);
+    if (index == 0) request->_tempObject = new String();
+    String& body = *reinterpret_cast<String*>(request->_tempObject);
+    body += String((const char*)data, len);
 
     if (index + len < total) return; // noch nicht vollständig
 
@@ -116,19 +115,25 @@ void SettingsWebServer::handleSettingsPost(AsyncWebServerRequest* request,
 
     cfg.save();
 
-#ifdef DEBUG
-    Serial.println("WEB: Settings saved via web interface");
-#endif
+    // Temporären Body-Puffer freigeben
+    if (request->_tempObject) {
+        delete reinterpret_cast<String*>(request->_tempObject);
+        request->_tempObject = nullptr;
+    }
 
-    request->send(200, "text/html", buildSettingsPage("Einstellungen gespeichert."));
+    #ifdef DEBUG
+        Serial.println("WEB: Settings saved via web interface");
+    #endif
+
+        request->send(200, "text/html", buildSettingsPage("Einstellungen gespeichert."));
 }
 
 void SettingsWebServer::handleSettingsReset(AsyncWebServerRequest* request) {
     AppConfig::getInstance().resetToDefaults();
-#ifdef DEBUG
-    Serial.println("WEB: Settings reset to defaults");
-#endif
-    request->send(200, "text/html", buildSettingsPage("Einstellungen auf Standardwerte zurückgesetzt."));
+    #ifdef DEBUG
+        Serial.println("WEB: Settings reset to defaults");
+    #endif
+        request->send(200, "text/html", buildSettingsPage("Einstellungen auf Standardwerte zurückgesetzt."));
 }
 
 void SettingsWebServer::handleNotFound(AsyncWebServerRequest* request) {
