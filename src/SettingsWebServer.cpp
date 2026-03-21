@@ -211,29 +211,29 @@ String SettingsWebServer::htmlHeader(const String& title) {
         "<style>"
         "body{font-family:sans-serif;margin:0;background:#111;color:#eee;}"
         "nav{background:#1a1a1a;padding:10px 20px;border-bottom:2px solid #e02020;}"
-        "nav a{color:#f5a800;text-decoration:none;margin-right:16px;font-weight:bold;}"
+        "nav a{color:#1a7a3c;text-decoration:none;margin-right:16px;font-weight:bold;}"
         "nav a:hover{color:#fff;text-decoration:underline;}"
         ".container{max-width:700px;margin:30px auto;padding:0 16px;}"
-        "h1{color:#f5a800;}"
-        "h2{color:#e02020;}"
+        "h1{color:#1a7a3c;}"
+        "h2{color:#f5a800;}"
         "label{display:block;margin-top:14px;font-size:0.9em;color:#bbb;}"
         "input[type=text],input[type=number],input[type=url]"
         "{width:100%;padding:7px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;"
         "border-radius:4px;box-sizing:border-box;margin-top:4px;}"
-        "input:focus{outline:2px solid #f5a800;border-color:#f5a800;}"
+        "input:focus{outline:2px solid #1a7a3c;border-color:#1a7a3c;}"
         ".btn{display:inline-block;margin-top:20px;padding:10px 24px;"
         "border:none;border-radius:5px;cursor:pointer;font-size:1em;font-weight:bold;}"
-        ".btn-save{background:#f5a800;color:#111;}"
-        ".btn-save:hover{background:#ffc030;}"
-        ".btn-reset{background:#e02020;color:#fff;margin-left:12px;}"
-        ".btn-reset:hover{background:#ff3a3a;}"
+        ".btn-save{background:#1a7a3c;color:#111;}"
+        ".btn-save:hover{background:#2d9e55;}"
+        ".btn-reset{background:#f5a800;color:#fff;margin-left:12px;}"
+        ".btn-reset:hover{background:#ffc030;}"
         ".btn-settings{display:inline-block;margin-top:20px;padding:10px 24px;"
         "background:#1a7a3c;color:#fff;border:none;border-radius:5px;cursor:pointer;"
         "font-size:1em;font-weight:bold;text-decoration:none;}"
         ".btn-settings:hover{background:#24a050;}"
         ".msg{margin-top:14px;padding:10px;background:#0e2e0e;border-left:4px solid #1a7a3c;"
         "border-radius:4px;color:#6fcf6f;}"
-        ".msg-reset{background:#2e0e0e;border-left:4px solid #e02020;color:#f88;}"
+        ".msg-reset{background:#2e0e0e;border-left:4px solid #f5a800;color:#f88;}"
         "</style></head><body>";
 }
 
@@ -449,9 +449,9 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
             "<form method='POST' action='/spacemap' id='mapForm'>"
             "<table id='mapTable' style='width:100%;border-collapse:collapse;margin-top:8px'>"
             "<thead><tr>"
-            "<th style='text-align:left;padding:6px;color:#f5a800;border-bottom:1px solid #3a3a3a'>LED#</th>"
-            "<th style='text-align:left;padding:6px;color:#f5a800;border-bottom:1px solid #3a3a3a'>Space Name</th>"
-            "<th style='text-align:left;padding:6px;color:#f5a800;border-bottom:1px solid #3a3a3a'>City</th>"
+            "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a'>LED#</th>"
+            "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a'>Space Name</th>"
+            "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a'>City</th>"
             "<th style='padding:6px;border-bottom:1px solid #3a3a3a'></th>"
             "</tr></thead>"
             "<tbody id='mapBody'>";
@@ -488,7 +488,7 @@ function buildRow(i, led, name, city) {
         + '<td style="padding:4px"><input type="number" name="led_'+i+'" value="'+led+'" min="0" max="255" style="width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px"></td>'
         + '<td style="padding:4px"><input type="text"   name="name_'+i+'" value="'+name+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px"></td>'
         + '<td style="padding:4px"><input type="text"   name="city_'+i+'" value="'+city+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px"></td>'
-        + '<td style="padding:4px"><button type="button" onclick="removeRow('+i+')" style="background:#e02020;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer">&#10005;</button></td>'
+        + '<td style="padding:4px"><button type="button" onclick="removeRow('+i+')" style="background:#f5a800;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer">&#10005;</button></td>'
         + '</tr>';
 }
 
@@ -550,6 +550,6 @@ String SettingsWebServer::buildSpaceMapRow(int i, int led, const String& name, c
            "<td style='padding:4px'><input type='number' name='led_"  + String(i) + "' value='" + String(led)  + "' min='0' max='255' style='width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px'></td>"
            "<td style='padding:4px'><input type='text'   name='name_" + String(i) + "' value='" + name        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px'></td>"
            "<td style='padding:4px'><input type='text'   name='city_" + String(i) + "' value='" + city        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px'></td>"
-           "<td style='padding:4px'><button type='button' onclick='removeRow(" + String(i) + ")' style='background:#e02020;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer'>&#10005;</button></td>"
+           "<td style='padding:4px'><button type='button' onclick='removeRow(" + String(i) + ")' style='background:#f5a800;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer'>&#10005;</button></td>"
            "</tr>";
 }
