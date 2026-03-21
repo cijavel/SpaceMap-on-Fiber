@@ -52,6 +52,10 @@ void WiFiHandler::initWifi() {
         delay(1000);
         ESP.restart();
     }
+
+    // Always print IP so the web UI can be reached even without DEBUG builds.
+    Serial.print("WIFI: IP address: ");
+    Serial.println(WiFi.localIP());
 }
 
 // --------------------------------------------------------------------------
