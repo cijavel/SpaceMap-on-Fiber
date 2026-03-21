@@ -1,17 +1,18 @@
 #include "DataSpaceList.h"
 
 // --------------------------------------------------------------------------
-// Hackerspaces of interest
+// Static list of hackerspaces to track.
+// Each entry maps a LED strip index to a space name and city.
+// Commented-out entries are prepared but currently not wired to a physical LED.
 // --------------------------------------------------------------------------
-// LED No, Name for parsing
 SpaceSearchList searchList[] = {
     { 0, "OpenLab Augsburg"                  , "Augsburg"},
-    { 1, "IT-Syndikat"                       , "Innsbruck"}, 
+    { 1, "IT-Syndikat"                       , "Innsbruck"},
     { 2, "MuCCC"                             , "Munich"},
     { 3, "realraum"                          , "Graz"},
     { 4, "Binary Kitchen"                    , "Regensburg"},
     { 5, "c-base"                            , "Berlin"},
-    { 6, "Chaosdorf"                         , "Düsseldorf"},
+    { 6, "Chaosdorf"                         , "Dusseldorf"},
     { 7, "CCC Frankfurt"                     , "Frankfurt"},
     { 8, "backspace"                         , "Bamberg"},
     { 9, "CCCHH"                             , "Hamburg" },
@@ -25,7 +26,7 @@ SpaceSearchList searchList[] = {
    //{17, "CCCFr"                             , "Freiburg im Breisgau"},
    //{18, "turmlabor"                         , "Dresden"},
    //{19, "Eigenbaukombinat Halle e.V."       , "Halle (Saale)"},
-   //{20, "Krautspace – Hackspace Jena e.V."  , "Jena"},
+   //{20, "Krautspace - Hackspace Jena e.V."  , "Jena"},
    //{21, "flipdot"                           , "Kassel"},
    //{22, "CCC Frankfurt"                     , "Frankfurt"},
    //{23, "Chaostreff Dortmund"               , "Dortmund"},
@@ -34,24 +35,18 @@ SpaceSearchList searchList[] = {
 };
 
 // --------------------------------------------------------------------------
-// Get the Led number for the Hackerspace
+// Returns the LED index for the hackerspace with the given name.
+// Returns -1 if the name is not found in the watch list.
 // --------------------------------------------------------------------------
 int DataSpaceList::getLEDforName(String name) {
-    int result = -1;
-    for (const auto& item : searchList) {
-        if (item.getName() == name) {
-                result =  item.getLED();
-                break;
+    for (const auto& entry : searchList) {
+        if (entry.getName() == name) {
+            return entry.getLED();
         }
     }
-    return result;
+    return -1;
 }
-
 
 int DataSpaceList::getNumberofSpacesonwatch() {
     return sizeof(searchList) / sizeof(searchList[0]);
 }
-
-        
-
-

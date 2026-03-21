@@ -7,25 +7,34 @@
 #include "DataSpaceList.h"
 #include <NeoPixelBus.h>
 
+// Wraps the NeoPixelBus LED strip. All operations go through this singleton.
 class NeoPixelLED {
 public:
-    static NeoPixelLED &getInstance() {
+    static NeoPixelLED& getInstance() {
         static NeoPixelLED instance;
         return instance;
     }
 
-    void updateLEDs(std::vector<SpaceStatusList> &spacestatus);
-    void enumerateLEDs(int delay_time);
+    // Clear the strip and prepare it for use. Call once in setup().
     void initLEDs();
+
+    // Run a startup sequence that cycles each LED through all status colors.
+    // delayMs controls the total time spent per LED in milliseconds.
+    void enumerateLEDs(int delayMs);
+
+    // Update the strip to reflect the current open/closed status of each tracked space.
+    void updateLEDs(std::vector<SpaceStatusList>& spaceStatusList);
 
 private:
     NeoPixelLED() {}
     NeoPixelLED(NeoPixelLED const&) = delete;
     void operator=(NeoPixelLED const&) = delete;
 
-    // Returns false if any LED index in the list is >= LED_COUNT.
-    bool validateLEDIndices(const std::vector<SpaceStatusList> &spacestatus);
-    RgbColor setBrightness(RgbColor color, int brightness);
+    // Returns false (and prints a warning) if any LED index in the list is >= LED_COUNT.
+    bool validateLEDIndices(const std::vector<SpaceStatusList>& spaceStatusList);
+
+    // Scales a color to the given brightness level (0–255).
+    RgbColor scaleBrightness(RgbColor color, int brightness);
 };
 
 #endif // SPACE_API_ON_FIBER_NEOPIXEL_H

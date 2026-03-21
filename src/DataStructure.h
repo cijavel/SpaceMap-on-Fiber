@@ -6,67 +6,70 @@
 enum class SpaceStatus { INIT, OPEN, CLOSED, UNKNOWN };
 
 // --------------------------------------------------------------------------
-// Structure for Hackerspaces of interest
+// Describes one entry in the static list of hackerspaces to track:
+// the LED index it maps to, its display name, and its city.
 // --------------------------------------------------------------------------
 struct SpaceSearchList {
-        uint8_t led;
-        String name;
-        String city;
+    uint8_t ledIndex;
+    String  name;
+    String  city;
 
-        SpaceSearchList(uint8_t led, String name, String city) {
-            this->led = led;
-            this->name = name;
-            this->city = city;
-        }
-        int getLED() const {
-            return this->led;
-        }
+    SpaceSearchList(uint8_t ledIndex, String name, String city) {
+        this->ledIndex = ledIndex;
+        this->name     = name;
+        this->city     = city;
+    }
 
-        String getName() const {
-            return this->name;
-        }
+    int getLED() const {
+        return this->ledIndex;
+    }
+
+    String getName() const {
+        return this->name;
+    }
 };
 
-
-
 // --------------------------------------------------------------------------
-// Structure for Hackerspaces status list
+// Holds the live status of a tracked hackerspace:
+// which LED it drives, its name, current open/closed status,
+// and the timestamp of the last status change.
 // --------------------------------------------------------------------------
 struct SpaceStatusList {
-        int led;
-        String name;
-        SpaceStatus status;
-        String lastChange;
+    int         ledIndex;
+    String      name;
+    SpaceStatus status;
+    String      lastChange;
 
-        SpaceStatusList(int led, String name, SpaceStatus status, String lastchange) {
-            this->led = led;
-            this->name = name;
-            this->status = status;
-            this->lastChange =lastchange;
-        }
-        int getLED() const {
-            return this->led;
-        }
+    SpaceStatusList(int ledIndex, String name, SpaceStatus status, String lastChange) {
+        this->ledIndex    = ledIndex;
+        this->name        = name;
+        this->status      = status;
+        this->lastChange  = lastChange;
+    }
 
-        String getName() const {
-            return this->name;
-        }
+    int getLED() const {
+        return this->ledIndex;
+    }
 
-        SpaceStatus getStatus() const {
-            return this->status;
-        }
+    String getName() const {
+        return this->name;
+    }
 
-        void setStatus(SpaceStatus status) {
-            this->status = status;
-        }
+    SpaceStatus getStatus() const {
+        return this->status;
+    }
 
-        String getlastChange() const {
-            return this->lastChange;
-        }
+    void setStatus(SpaceStatus status) {
+        this->status = status;
+    }
 
-        void setlastChange(String lastchange) {
-            this->lastChange = lastchange;
-        }
+    String getlastChange() const {
+        return this->lastChange;
+    }
+
+    void setlastChange(String lastChange) {
+        this->lastChange = lastChange;
+    }
 };
 
 #endif // SPACE_API_ON_DATASTRUCTURE_H

@@ -10,17 +10,20 @@
 #include "DataSpaceList.h"
 #include "TimeHandler.h"
 
+// Fetches and parses the SpaceAPI JSON feed.
+// All methods are static – this class is never instantiated.
 class WebClientHandler {
 public:
-    // All methods are static – no instance needed.
-    static void getSpaceStatus(std::vector<SpaceStatusList> &spaStaVector,
-                               const String &webpageout);
+    // Download the SpaceAPI endpoint and update spaceStatusList with current open/closed states.
+    static void getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusList,
+                               const String& spaceApiUrl);
 
 private:
-    WebClientHandler() = delete; // purely static class – no instantiation
+    WebClientHandler() = delete; // Purely static – prevent instantiation.
 
-    static void modifyStatus(std::vector<SpaceStatusList> &spaStaVector,
-                             int led, const String &name, SpaceStatus status);
+    // Add a new entry or update the status of an existing one in spaceStatusList.
+    static void updateOrInsertStatus(std::vector<SpaceStatusList>& spaceStatusList,
+                                     int ledIndex, const String& name, SpaceStatus status);
 };
 
 #endif // SPACE_API_ON_FIBER_WEBCLIENTHANDLER_H

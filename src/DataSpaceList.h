@@ -5,23 +5,25 @@
 #include "DataStructure.h"
 #include <ArduinoJson.h>
 
+// Provides access to the static list of tracked hackerspaces (defined in DataSpaceList.cpp).
+// Use getLEDforName() to resolve a space name to its LED strip index.
 class DataSpaceList {
+private:
+    DataSpaceList() {};
+    DataSpaceList(DataSpaceList const&);
+    void operator=(DataSpaceList const&);
 
-    private:
-            DataSpaceList() {};                   // Constructor? (the {} brackets) are needed here.
-            DataSpaceList(DataSpaceList const&);   // Don't Implement
-            void operator=(DataSpaceList const&); // Don't implement
-    public:
+public:
+    static DataSpaceList& getInstance() {
+        static DataSpaceList instance;
+        return instance;
+    }
 
-        static DataSpaceList &getInstance() {
-            static DataSpaceList instance; // Guaranteed to be destroyed.
-            return instance;// Instantiated on first use.
-        };
+    // Returns the LED index for the given hackerspace name, or -1 if not found.
+    int getLEDforName(String name);
 
-        int getLEDforName(String name);
-        int getNumberofSpacesonwatch();
-       
+    // Returns the total number of hackerspaces in the watch list.
+    int getNumberofSpacesonwatch();
 };
-#endif //SPACE_API_ON_FIBER_DATASPACELIST_H
 
-    
+#endif // SPACE_API_ON_FIBER_DATASPACELIST_H

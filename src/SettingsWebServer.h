@@ -4,8 +4,8 @@
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 
-// Kapselt den AsyncWebServer und registriert alle Routen
-// für die Web-Einstellungsseiten.
+// Wraps the AsyncWebServer and registers all routes for the settings web UI.
+// Access via getInstance(); call begin() once in setup().
 class SettingsWebServer {
 public:
     static SettingsWebServer& getInstance() {
@@ -13,7 +13,7 @@ public:
         return instance;
     }
 
-    // Server starten und Routen registrieren. Einmalig in setup() aufrufen.
+    // Start the server and register all routes. Call once in setup().
     void begin();
 
 private:
@@ -25,7 +25,7 @@ private:
 
     void registerRoutes();
 
-    // Route-Handler
+    // Route handlers
     void handleIndex(AsyncWebServerRequest* request);
     void handleSettingsGet(AsyncWebServerRequest* request);
     void handleSettingsPost(AsyncWebServerRequest* request,
@@ -34,7 +34,7 @@ private:
     void handleSettingsReset(AsyncWebServerRequest* request);
     void handleNotFound(AsyncWebServerRequest* request);
 
-    // Hilfsmethoden zum HTML-Aufbau
+    // HTML page builders
     static String buildIndexPage(const String& message = "");
     static String buildSettingsPage(const String& message = "");
     static String htmlHeader(const String& title);
