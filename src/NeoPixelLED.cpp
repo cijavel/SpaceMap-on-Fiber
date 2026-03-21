@@ -1,141 +1,92 @@
-
 #include "NeoPixelLED.h"
 #include <NeoPixelBus.h>
 
-// three element pixels, in different order and speeds
 NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(LED_COUNT, LED_DATA_PIN);
 
 // --------------------------------------------------------------------------
-// Definition of color
+// Color definitions
 // --------------------------------------------------------------------------
-RgbColor copen(0,255,0);
-RgbColor cclosed(255,0,0);
-RgbColor cunknown(24,12,128);
-RgbColor cwhite( 255,255,255);
+RgbColor copen(0, 255, 0);
+RgbColor cclosed(255, 0, 0);
+RgbColor cunknown(24, 12, 128);
+RgbColor cwhite(255, 255, 255);
 RgbColor cblack(0);
 
-
 // --------------------------------------------------------------------------
-// init Leds
+// Init LEDs
 // --------------------------------------------------------------------------
 void NeoPixelLED::initLEDs() {
     strip.Begin();
     strip.ClearTo(cblack);
-    strip.Show();   
- }
-
-// --------------------------------------------------------------------------
-// update Hackerspace status on led strip
-// --------------------------------------------------------------------------
-void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus){
-    if (checknumberofLEDs(spacestatus) == true){
-        for (const auto& item : spacestatus) {
-                if (item.getStatus() == SpaceStatus::OPEN) {
-                    // red and green are swapped for our PL9823 leds :)
-                    strip.SetPixelColor(item.getLED(), setBrightness(copen, LED_BRIGHTNESS));
-                } else if(item.getStatus() == SpaceStatus::CLOSED) {
-                    strip.SetPixelColor(item.getLED(), setBrightness(cclosed, LED_BRIGHTNESS));
-                } else if(item.getStatus() == SpaceStatus::UNKNOWN) {
-                    strip.SetPixelColor(item.getLED(), setBrightness(cunknown, LED_BRIGHTNESS));
-                } else {
-                    strip.SetPixelColor(item.getLED(), setBrightness(cblack, LED_BRIGHTNESS));
-                }
-        }
-        strip.Show();
-    }
+    strip.Show();
 }
 
 // --------------------------------------------------------------------------
-// led test - initial phase
+// Update Hackerspace status on LED strip
 // --------------------------------------------------------------------------
-void NeoPixelLED::enumerateLEDs( int delay_time) {
-    int i ;
+void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus) {
+    if (!validateLEDIndices(spacestatus)) {
+        return;
+    }
+    for (const auto& item : spacestatus) {
+        RgbColor color;
+        switch (item.getStatus()) {
+            case SpaceStatus::OPEN:    color = setBrightness(copen,    LED_BRIGHTNESS); break;
+            case SpaceStatus::CLOSED:  color = setBrightness(cclosed,  LED_BRIGHTNESS); break;
+            case SpaceStatus::UNKNOWN: color = setBrightness(cunknown, LED_BRIGHTNESS); break;
+            default:                   color = setBrightness(cblack,   LED_BRIGHTNESS); break;
+        }
+        strip.SetPixelColor(item.getLED(), color);
+    }
+    strip.Show();
+}
 
-    for (i = 0; i < LED_COUNT; i++){
+// --------------------------------------------------------------------------
+// LED test – startup sequence
+// --------------------------------------------------------------------------
+void NeoPixelLED::enumerateLEDs(int delay_time) {
+    for (int i = 0; i < LED_COUNT; i++) {
         strip.ClearTo(cblack);
         strip.Show();
-        delay(delay_time/4);
-        strip.SetPixelColor(i, setBrightness(copen, LED_BRIGHTNESS));
-        strip.Show();
-        delay(delay_time/4);
-        strip.SetPixelColor(i, setBrightness(cclosed, LED_BRIGHTNESS));
-        strip.Show();
-        delay(delay_time/4);
-        strip.SetPixelColor(i, setBrightness(cunknown, LED_BRIGHTNESS));
-        strip.Show();
-        delay(delay_time/4);
+        delay(delay_time / 4);
+
+        strip.SetPixelColor(i, setBrightness(copen,    LED_BRIGHTNESS)); strip.Show(); delay(delay_time / 4);
+        strip.SetPixelColor(i, setBrightness(cclosed,  LED_BRIGHTNESS)); strip.Show(); delay(delay_time / 4);
+        strip.SetPixelColor(i, setBrightness(cunknown, LED_BRIGHTNESS)); strip.Show(); delay(delay_time / 4);
     }
     strip.ClearTo(cblack);
     strip.Show();
 }
 
 // --------------------------------------------------------------------------
-// set the Brightness of led
+// Scale a color to a given brightness (0–255)
 // --------------------------------------------------------------------------
 RgbColor NeoPixelLED::setBrightness(RgbColor color, int brightness) {
-  color = RgbColor(
-    (color.R * brightness) / 255,
-    (color.G * brightness) / 255,
-    (color.B * brightness) / 255
-  );
-  return color;
+    return RgbColor(
+        (color.R * brightness) / 255,
+        (color.G * brightness) / 255,
+        (color.B * brightness) / 255
+    );
 }
 
-
 // --------------------------------------------------------------------------
-// set the Brightness of led Random
+// Validate that all LED indices in the status list are within strip bounds.
+// Returns false and prints a warning if any index would overflow.
 // --------------------------------------------------------------------------
-RgbColor NeoPixelLED::setBrightnessStar(RgbColor color, int brightness, int variante) {
-
-    if (brightness <= variante){
-        variante = 0;
+bool NeoPixelLED::validateLEDIndices(const std::vector<SpaceStatusList> &spacestatus) {
+    for (const auto& item : spacestatus) {
+        if (item.getLED() >= LED_COUNT) {
+            Serial.println("------------------------------");
+            Serial.println("ERROR: LED index out of range!");
+            Serial.print("Space: ");
+            Serial.println(item.getName());
+            Serial.print("LED index: ");
+            Serial.print(item.getLED());
+            Serial.print(" / LED_COUNT: ");
+            Serial.println(LED_COUNT);
+            Serial.println("------------------------------");
+            return false;
+        }
     }
-
-    int randomValue = random(1, (brightness-variante)+1); 
-  
-
-
-  color = RgbColor(
-    (color.R * randomValue ) / 255,
-    (color.G * randomValue) / 255,
-    (color.B * randomValue) / 255
-  );
-  return color;
+    return true;
 }
-
-// --------------------------------------------------------------------------
-// set the Brightness of led Colorshift
-// --------------------------------------------------------------------------
-RgbColor NeoPixelLED::setBrightnessStarColorshift(RgbColor color, int brightness, int colorshift) {
-  int randomValue = random(-1 * colorshift, colorshift);
-  int adjustedBrightness = max(0, min(255, brightness + randomValue));
-
-  color = RgbColor(
-    (color.R * adjustedBrightness) / 255,
-    (color.G * adjustedBrightness) / 255,
-    (color.B * adjustedBrightness) / 255
-  );
-  return color;
-}
-
-
-
-
-
-// --------------------------------------------------------------------------
-// heck, if we got enough leds for all Hackerspace in list
-// --------------------------------------------------------------------------
-bool NeoPixelLED::checknumberofLEDs(std::vector<SpaceStatusList> &spacestatus) {
-    bool b = true;
-    if (spacestatus.size() > LED_COUNT) {
-        b = false;
-        Serial.println("------------------------------");
-        Serial.println("Please add more LEDs !!!!!!!!!");
-        Serial.print("Spaces: ");
-        Serial.println(spacestatus.size());
-        Serial.print("LEDs: ");
-        Serial.println(LED_COUNT);
-        Serial.println("------------------------------");
-    }
-    return b;
- }
