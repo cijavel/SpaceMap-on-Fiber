@@ -1,52 +1,38 @@
 #include "WebClientHandler.h"
 
 // --------------------------------------------------------------------------
-// add a new Hackerpace to vectore or change the status of an existing hackerspace
+// Add a new Hackerspace or update the status of an existing one
 // --------------------------------------------------------------------------
-void WebClientHandler::modifyStatus( std::vector<SpaceStatusList> &spaStaVector, int led, String name, SpaceStatus status) {
+void WebClientHandler::modifyStatus(std::vector<SpaceStatusList> &spaStaVector,
+                                    int led, const String &name, SpaceStatus status) {
+    for (auto &element : spaStaVector) {
+        if (element.getName() != name) continue;
 
-    bool change = false;
-    for(auto &element : spaStaVector ){
-      if(element.getName() != name){
-        continue;
-      } 
-      change = true; 
-      
-      if (element.getStatus() != status) {
-        element.setStatus(status);
-        element.setlastChange(TimeHandler::localTime("%Y.%m.%d %H:%M"));
-      }
-
-      break;
+        if (element.getStatus() != status) {
+            element.setStatus(status);
+            element.setlastChange(TimeHandler::localTime("%Y.%m.%d %H:%M"));
+        }
+        return; // found and (maybe) updated – done
     }
-
-  if (change == false){
-     spaStaVector.push_back({led, name, status , TimeHandler::localTime("%Y.%m.%d %H:%M")});
-  }
-
-}  
+    // Not found – add as new entry
+    spaStaVector.push_back({led, name, status, TimeHandler::localTime("%Y.%m.%d %H:%M")});
+}
 
 // --------------------------------------------------------------------------
-// download and parse json from spaceAPI. Call to set up status list 
+// Download and parse the SpaceAPI JSON, then update the status vector
 // --------------------------------------------------------------------------
-void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList> &spaceStatusVector, String webpageout) {
-   
-
+void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList> &spaceStatusVector,
+                                      const String &webpageout) {
     DataSpaceList &SpaceBase = DataSpaceList::getInstance();
-    int spaceledNr;
-    String spaceName;
-    String currentSpaceStatus;
-    HTTPClient http; 
 
-    
+    HTTPClient http;
     WiFiClientSecure client;
+    client.setInsecure(); // No CA bundle on the device – acceptable for this use case
 
-    // configure server and url
-    client.setInsecure();
-    http.begin(client, webpageout );
-    http.useHTTP10(true); // important for chunking and stream reading
+    http.begin(client, webpageout);
+    http.useHTTP10(true); // Required for streamed/chunked reading
+
     int httpCode = http.GET();
-
     if (httpCode != HTTP_CODE_OK) {
         Serial.print(F("HTTP GET failed, code: "));
         Serial.println(httpCode);
@@ -54,45 +40,48 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList> &spaceStatusV
         return;
     }
 
-    Stream& payload = http.getStream();
+    Stream &payload = http.getStream();
 
+    // Filter: only pull fields we actually need to reduce memory pressure
     StaticJsonDocument<128> filter;
-    filter["url"] = true;
-    filter["space"] = true;
-    filter["state"]["open"] = true;
-    filter["state"]["lastchange"] = true;
+    filter["space"]          = true;
+    filter["state"]["open"]  = true;
 
-    DynamicJsonDocument doc(4096);  // You can use a String as your JSON input.WARNING: the string in the input  will be duplicated in the JsonDocument.
+    // Size budget: one parsed space entry is small; 4096 is comfortable for one
+    // object but ArduinoJson streams one object at a time here, so this is fine.
+    DynamicJsonDocument doc(4096);
 
-    payload.find("["); // should actually be byte 0 of the response stream
+    if (!payload.find("[")) { // JSON root must be an array
+        Serial.println(F("SpaceAPI: expected JSON array, got something else"));
+        http.end();
+        return;
+    }
+
     do {
-
-        spaceledNr = -1;
-        DeserializationError error = deserializeJson(doc, payload, DeserializationOption::Filter(filter));
+        DeserializationError error = deserializeJson(doc, payload,
+                                                     DeserializationOption::Filter(filter));
         if (error) {
             Serial.print(F("deserializeJson() failed: "));
             Serial.println(error.c_str());
+            continue;
         }
-        else
-        {
-            // if space is in known_spaces, update status
-            spaceName = doc["space"].as<String>();
-            spaceledNr = SpaceBase.getLEDforName(spaceName);
-            currentSpaceStatus = doc["state"]["open"].as<String>();
 
-              if (-1 < spaceledNr) {
-                if (currentSpaceStatus == "true") {
-                  modifyStatus(spaceStatusVector, spaceledNr, spaceName,SpaceStatus::OPEN);  
-                } else if (currentSpaceStatus == "false") {
-                  modifyStatus(spaceStatusVector, spaceledNr, spaceName,SpaceStatus::CLOSED);  
-                } else {
-                  modifyStatus(spaceStatusVector, spaceledNr, spaceName,SpaceStatus::UNKNOWN);  
+        String spaceName = doc["space"].as<String>();
+        int led = SpaceBase.getLEDforName(spaceName);
+        if (led < 0) continue; // not a space we care about
 
-                }
-              }
+        // doc["state"]["open"] can be true, false, or missing/null
+        JsonVariant openField = doc["state"]["open"];
+        SpaceStatus status;
+        if (openField.is<bool>()) {
+            status = openField.as<bool>() ? SpaceStatus::OPEN : SpaceStatus::CLOSED;
+        } else {
+            status = SpaceStatus::UNKNOWN;
         }
-    } while (payload.findUntil(",","]"));
+
+        modifyStatus(spaceStatusVector, led, spaceName, status);
+
+    } while (payload.findUntil(",", "]"));
+
     http.end();
 }
-
-
