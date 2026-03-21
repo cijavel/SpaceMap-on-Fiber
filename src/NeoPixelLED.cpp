@@ -1,5 +1,6 @@
 #include "NeoPixelLED.h"
 #include <NeoPixelBus.h>
+#include "AppConfig.h"
 
 NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(LED_COUNT, LED_DATA_PIN);
 
@@ -30,11 +31,12 @@ void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus) {
     }
     for (const auto& item : spacestatus) {
         RgbColor color;
+        uint8_t brightness = AppConfig::getInstance().getLedBrightness();
         switch (item.getStatus()) {
-            case SpaceStatus::OPEN:    color = setBrightness(copen,    LED_BRIGHTNESS); break;
-            case SpaceStatus::CLOSED:  color = setBrightness(cclosed,  LED_BRIGHTNESS); break;
-            case SpaceStatus::UNKNOWN: color = setBrightness(cunknown, LED_BRIGHTNESS); break;
-            default:                   color = setBrightness(cblack,   LED_BRIGHTNESS); break;
+            case SpaceStatus::OPEN:    color = setBrightness(copen,    brightness); break;
+            case SpaceStatus::CLOSED:  color = setBrightness(cclosed,  brightness); break;
+            case SpaceStatus::UNKNOWN: color = setBrightness(cunknown, brightness); break;
+            default:                   color = setBrightness(cblack,   brightness); break;
         }
         strip.SetPixelColor(item.getLED(), color);
     }
@@ -50,9 +52,10 @@ void NeoPixelLED::enumerateLEDs(int delay_time) {
         strip.Show();
         delay(delay_time / 4);
 
-        strip.SetPixelColor(i, setBrightness(copen,    LED_BRIGHTNESS)); strip.Show(); delay(delay_time / 4);
-        strip.SetPixelColor(i, setBrightness(cclosed,  LED_BRIGHTNESS)); strip.Show(); delay(delay_time / 4);
-        strip.SetPixelColor(i, setBrightness(cunknown, LED_BRIGHTNESS)); strip.Show(); delay(delay_time / 4);
+        uint8_t brightness = AppConfig::getInstance().getLedBrightness();
+        strip.SetPixelColor(i, setBrightness(copen,    brightness)); strip.Show(); delay(delay_time / 4);
+        strip.SetPixelColor(i, setBrightness(cclosed,  brightness)); strip.Show(); delay(delay_time / 4);
+        strip.SetPixelColor(i, setBrightness(cunknown, brightness)); strip.Show(); delay(delay_time / 4);
     }
     strip.ClearTo(cblack);
     strip.Show();
@@ -83,7 +86,7 @@ bool NeoPixelLED::validateLEDIndices(const std::vector<SpaceStatusList> &spacest
             Serial.print("LED index: ");
             Serial.print(item.getLED());
             Serial.print(" / LED_COUNT: ");
-            Serial.println(LED_COUNT);
+            Serial.println(AppConfig::getInstance().getLedCount());
             Serial.println("------------------------------");
             return false;
         }
