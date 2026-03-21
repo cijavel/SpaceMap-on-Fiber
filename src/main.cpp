@@ -115,7 +115,8 @@ void loop() {
             PrintSpaceStatus(spacestatus);
         #endif
 
-        neopixelWrite(RGB_BUILTIN, 0, 0, ONBOARD_BRIGHTNESS); // BLUE – API call running
+        const uint8_t obBright = AppConfig::getInstance().getOnboardBrightness();
+        neopixelWrite(RGB_BUILTIN, 0, 0, obBright); // BLUE – API call running
         WebClientHandler::getSpaceStatus(spacestatus, AppConfig::getInstance().getSpaceApiUrl());
 
         // Refresh 'now' after the (potentially slow) HTTP call.
@@ -124,9 +125,9 @@ void loop() {
         lastLedUpdate = now;
 
         if (WiFiClass::status() == WL_CONNECTED) {
-            neopixelWrite(RGB_BUILTIN, 0, ONBOARD_BRIGHTNESS, 0); // GREEN
+            neopixelWrite(RGB_BUILTIN, 0, obBright, 0); // GREEN
         } else {
-            neopixelWrite(RGB_BUILTIN, ONBOARD_BRIGHTNESS, 0, 0); // RED
+            neopixelWrite(RGB_BUILTIN, obBright, 0, 0); // RED
         }
     }
 
