@@ -521,7 +521,7 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
     html += "<h2>Export</h2>"
             "<p style='color:#bbb;font-size:0.9em'>Downloads the current mapping as a <code>searchList.cpp</code> snippet "
             "ready to paste into <code>DataSpaceList.cpp</code>.</p>"
-            "<a href='/spacemap/export' class='btn btn-save' style='text-decoration:none'>&#8659; Export searchList.cpp</a>";
+            "<a href='/spacemap/export' class='btn btn-save' style='text-decoration:none'>&#8659; Export searchList.txt</a>";
 
     // --- Reset ---
     html += "<h2>Reset</h2>"
