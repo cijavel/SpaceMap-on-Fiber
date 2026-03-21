@@ -11,6 +11,8 @@
 #include "TimeHandler.h"
 #include "DataStructure.h"
 #include "NeoPixelLED.h"
+#include "AppConfig.h"
+#include "SettingsWebServer.h"
 
 #ifdef DEBUG
     static void PrintRamUsage() {
@@ -51,12 +53,10 @@ unsigned long lastLedUpdate = 0;
 unsigned long lastRamPrint  = 0;
 #endif
 
-// Convert interval constants (seconds) to milliseconds once at compile time.
-static constexpr unsigned long MS_WIFI_CHECK = (unsigned long)interval_in_Seconds_WiFiCheck  * 1000UL;
-static constexpr unsigned long MS_LED_UPDATE = (unsigned long)interval_in_Seconds_LEDs       * 1000UL;
-static constexpr unsigned long MS_API_CALL   = (unsigned long)interval_in_Seconds_api        * 1000UL;
+// Intervalle werden zur Laufzeit aus AppConfig gelesen (in Millisekunden).
+// constexpr entfällt, da die Werte nach dem Start per Web änderbar sind.
 #ifdef DEBUG
-static constexpr unsigned long MS_RAM_PRINT  = (unsigned long)interval_in_Seconds_RAMPrintout * 1000UL;
+static constexpr unsigned long MS_RAM_PRINT = (unsigned long)interval_in_Seconds_RAMPrintout * 1000UL;
 #endif
 
 // --------------------------------------------------------------------------
@@ -68,8 +68,14 @@ void setup() {
     Serial.println();
     Serial.println("\nINITIAL");
 
+    // Laufzeit-Konfiguration aus NVS laden (Defaults aus Configuration.h)
+    AppConfig::getInstance().load();
+
     WiFiHandler::initWifi();
     TimeHandler::initTime();
+
+    // Web-Settings-Server starten
+    SettingsWebServer::getInstance().begin();
 
     NeoPixelLED &NeoLED = NeoPixelLED::getInstance();
     NeoLED.initLEDs();
@@ -89,8 +95,8 @@ void loop() {
     // Use millis() directly; unsigned subtraction handles the ~49-day overflow.
     unsigned long now = millis();
 
-    // --- WiFi watchdog ---
-    if (now - lastWifiCheck >= MS_WIFI_CHECK) {
+     // --- WiFi watchdog ---
+    if (now - lastWifiCheck >= AppConfig::getInstance().getIntervalWifiCheck() * 1000UL) {
         lastWifiCheck = now;
         WiFiHandler::checkWifi();
     }
@@ -103,14 +109,14 @@ void loop() {
     }
     #endif
 
-    // --- API fetch ---
-    if (now - lastApiCall >= MS_API_CALL) {
+     // --- API fetch ---
+    if (now - lastApiCall >= AppConfig::getInstance().getIntervalApi() * 1000UL) {
         #ifdef DEBUG
             PrintSpaceStatus(spacestatus);
         #endif
 
         neopixelWrite(RGB_BUILTIN, 0, 0, ONBOARD_BRIGHTNESS); // BLUE – API call running
-        WebClientHandler::getSpaceStatus(spacestatus, webpage_SpaceAPI);
+        WebClientHandler::getSpaceStatus(spacestatus, AppConfig::getInstance().getSpaceApiUrl());
 
         // Refresh 'now' after the (potentially slow) HTTP call.
         now           = millis();
@@ -125,7 +131,7 @@ void loop() {
     }
 
     // --- LED update ---
-    if (now - lastLedUpdate >= MS_LED_UPDATE) {
+    if (now - lastLedUpdate >= AppConfig::getInstance().getIntervalLEDs() * 1000UL) {
         lastLedUpdate = now;
         NeoLED.updateLEDs(spacestatus);
     }
