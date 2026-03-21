@@ -3,7 +3,12 @@
 static const char* NVS_NS = "spacemap";  // NVS Namespace (max 15 Zeichen)
 
 void AppConfig::load() {
-    _prefs.begin(NVS_NS, /*readOnly=*/false);
+    if (!_prefs.begin(NVS_NS, /*readOnly=*/false)) {
+#ifdef DEBUG
+        Serial.println("CFG: NVS open failed in load()");
+#endif
+        return; // Defaults aus Konstruktor bleiben erhalten
+    }
 
     _intervalWifiCheck  = _prefs.getULong("wifiInterval",  interval_in_Seconds_WiFiCheck);
     _intervalLEDs       = _prefs.getULong("ledInterval",   interval_in_Seconds_LEDs);
@@ -17,7 +22,12 @@ void AppConfig::load() {
 }
 
 void AppConfig::save() {
-    _prefs.begin(NVS_NS, /*readOnly=*/false);
+    if (!_prefs.begin(NVS_NS, /*readOnly=*/false)) {
+#ifdef DEBUG
+        Serial.println("CFG: NVS open failed in save()");
+#endif
+        return;
+    }
 
     _prefs.putULong("wifiInterval", _intervalWifiCheck);
     _prefs.putULong("ledInterval",  _intervalLEDs);
