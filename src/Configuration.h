@@ -23,7 +23,7 @@
 #define interval_in_Seconds_RAMPrintout 30
 
 // Default SpaceAPI endpoint – returns a JSON array of all registered hackerspaces.
-#define webpage_SpaceAPI "https://spaceapi.ccc.de/api/spaces"
+#define webpage_SpaceAPI "https://api.spaceapi.io/"
 
 #define BAUDRATE 9600
 #define DeviceName "SpaceMap on Fiber 2023"

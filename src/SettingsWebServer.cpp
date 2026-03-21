@@ -36,12 +36,15 @@ void SettingsWebServer::registerRoutes() {
         handleSettingsGet(req);
     });
 
-    // onRequest fires after the body is received; actual parsing happens in the body callback.
+    // Body callback accumulates chunks; onRequest fires once the full body is ready.
     _server.on("/settings", HTTP_POST,
-        [this](AsyncWebServerRequest* req) { /* placeholder – body handler runs first */ },
+        [this](AsyncWebServerRequest* req) {
+            handleSettingsPost(req);
+        },
         nullptr,
-        [this](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
-            handleSettingsPost(req, data, len, index, total);
+        [](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
+            if (index == 0) req->_tempObject = new String();
+            *reinterpret_cast<String*>(req->_tempObject) += String((const char*)data, len);
         }
     );
 
@@ -54,10 +57,13 @@ void SettingsWebServer::registerRoutes() {
     });
 
     _server.on("/spacemap", HTTP_POST,
-        [this](AsyncWebServerRequest* req) { /* placeholder */ },
+        [this](AsyncWebServerRequest* req) {
+            handleSpaceMapPost(req);
+        },
         nullptr,
-        [this](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
-            handleSpaceMapPost(req, data, len, index, total);
+        [](AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t index, size_t total) {
+            if (index == 0) req->_tempObject = new String();
+            *reinterpret_cast<String*>(req->_tempObject) += String((const char*)data, len);
         }
     );
 
@@ -97,16 +103,12 @@ void SettingsWebServer::handleSettingsGet(AsyncWebServerRequest* request) {
     request->send(200, "text/html", buildSettingsPage());
 }
 
-void SettingsWebServer::handleSettingsPost(AsyncWebServerRequest* request,
-                                           uint8_t* data, size_t len,
-                                           size_t index, size_t total) {
-    // Accumulate body chunks into a String stored in _tempObject.
-    if (index == 0) request->_tempObject = new String();
+void SettingsWebServer::handleSettingsPost(AsyncWebServerRequest* request) {
+    if (!request->_tempObject) {
+        request->send(400, "text/html", buildSettingsPage("Error: empty request body."));
+        return;
+    }
     String& body = *reinterpret_cast<String*>(request->_tempObject);
-    body += String((const char*)data, len);
-
-    if (index + len < total) return; // Body not yet complete – wait for more chunks.
-    if (!request->_tempObject) return;
 
     AppConfig& cfg = AppConfig::getInstance();
 
@@ -372,14 +374,12 @@ void SettingsWebServer::handleSpaceMapGet(AsyncWebServerRequest* request) {
 // --------------------------------------------------------------------------
 // /spacemap  – POST: save edited list
 // --------------------------------------------------------------------------
-void SettingsWebServer::handleSpaceMapPost(AsyncWebServerRequest* request,
-                                           uint8_t* data, size_t len,
-                                           size_t index, size_t total) {
-    if (index == 0) request->_tempObject = new String();
+void SettingsWebServer::handleSpaceMapPost(AsyncWebServerRequest* request) {
+    if (!request->_tempObject) {
+        request->send(400, "text/html", buildSpaceMapPage("Error: empty request body."));
+        return;
+    }
     String& body = *reinterpret_cast<String*>(request->_tempObject);
-    body += String((const char*)data, len);
-    if (index + len < total) return;
-    if (!request->_tempObject) return;
 
     // URL-decode helper (reused pattern from handleSettingsPost)
     auto urlDecode = [](const String& s) -> String {

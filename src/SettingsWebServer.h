@@ -30,14 +30,10 @@ private:
      // Route handlers
     void handleIndex(AsyncWebServerRequest* request);
     void handleSettingsGet(AsyncWebServerRequest* request);
-    void handleSettingsPost(AsyncWebServerRequest* request,
-                            uint8_t* data, size_t len,
-                            size_t index, size_t total);
+    void handleSettingsPost(AsyncWebServerRequest* request);
     void handleSettingsReset(AsyncWebServerRequest* request);
     void handleSpaceMapGet(AsyncWebServerRequest* request);
-    void handleSpaceMapPost(AsyncWebServerRequest* request,
-                            uint8_t* data, size_t len,
-                            size_t index, size_t total);
+    void handleSpaceMapPost(AsyncWebServerRequest* request);
     void handleSpaceMapReset(AsyncWebServerRequest* request);
     void handleSpaceMapExport(AsyncWebServerRequest* request);
     void handleNotFound(AsyncWebServerRequest* request);
