@@ -375,11 +375,9 @@ void SettingsWebServer::handleSpaceMapGet(AsyncWebServerRequest* request) {
 // /spacemap  – POST: save edited list
 // --------------------------------------------------------------------------
 void SettingsWebServer::handleSpaceMapPost(AsyncWebServerRequest* request) {
-    if (!request->_tempObject) {
-        request->send(400, "text/html", buildSpaceMapPage("Error: empty request body."));
-        return;
-    }
-    String& body = *reinterpret_cast<String*>(request->_tempObject);
+    String body = request->_tempObject
+                  ? *reinterpret_cast<String*>(request->_tempObject)
+                  : String("");
 
     // URL-decode helper (reused pattern from handleSettingsPost)
     auto urlDecode = [](const String& s) -> String {
@@ -479,11 +477,6 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
     String html = htmlHeader("SpaceMap") + navBar();
     html += "<h1>LED &#8596; Hackerspace Mapping</h1>";
 
-    if (message.length() > 0) {
-        bool isReset = message.indexOf("reset") >= 0 || message.indexOf("Reset") >= 0;
-        html += "<div class='msg" + String(isReset ? " msg-reset" : "") + "'>" + message + "</div>";
-    }
-
     // --- Import area ---
     html += "<h2>Import</h2>"
             "<p style='color:#bbb;font-size:0.9em'>Paste your mapping below and click Import. Expected format:</p>"
@@ -513,9 +506,18 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
     }
 
     html += "</tbody></table>"
-            "<button type='button' class='btn btn-save' style='background:#1a7a3c;margin-top:12px' onclick='addRow()'>&#43; Add row</button>"
-            "<button type='submit' class='btn btn-save' style='margin-top:12px;margin-left:8px'>&#128190; Save</button>"
-            "</form>";
+            "<div style='margin-top:12px;display:flex;align-items:center;flex-wrap:wrap;gap:10px'>"
+            "<button type='button' class='btn btn-save' style='background:#1a7a3c;margin:0' onclick='addRow()'>&#43; Add row</button>"
+            "<button type='submit' class='btn btn-save' style='margin:0'>&#128190; Save</button>";
+    if (message.length() > 0) {
+        bool isReset = message.indexOf("eset") >= 0;
+        bool isError = message.indexOf("rror") >= 0;
+        String color = isError ? "#f88" : "#6fcf6f";
+        String bg    = isError ? "#2e0e0e" : (isReset ? "#2e1a00" : "#0e2e0e");
+        html += "<span style='padding:6px 14px;border-radius:4px;font-weight:bold;"
+                "background:" + bg + ";color:" + color + "'>" + message + "</span>";
+    }
+    html += "</div></form>";
 
     // --- Export ---
     html += "<h2>Export</h2>"
