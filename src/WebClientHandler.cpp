@@ -72,11 +72,11 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList> &spaceStatusV
 
         // doc["state"]["open"] can be true, false, or missing/null
         JsonVariant openField = doc["state"]["open"];
-        SpaceStatus status;
-        if (openField.is<bool>()) {
-            status = openField.as<bool>() ? SpaceStatus::OPEN : SpaceStatus::CLOSED;
-        } else {
-            status = SpaceStatus::UNKNOWN;
+        switch (item.getStatus()) {
+            case SpaceStatus::OPEN:    color = setBrightness(copen,    brightness); break;
+            case SpaceStatus::CLOSED:  color = setBrightness(cclosed,  brightness); break;
+            case SpaceStatus::UNKNOWN: color = setBrightness(cunknown, brightness); break;
+            default:                   color = setBrightness(cblack,   brightness); break;
         }
 
         modifyStatus(spaceStatusVector, led, spaceName, status);

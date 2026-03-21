@@ -3,7 +3,7 @@
 #ifndef SPACE_API_ON_DATASTRUCTURE_H
 #define SPACE_API_ON_DATASTRUCTURE_H
 
-enum SpaceStatus {INIT, OPEN, CLOSED, UNKNOWN};
+enum class SpaceStatus { INIT, OPEN, CLOSED, UNKNOWN };
 
 // --------------------------------------------------------------------------
 // Structure for Hackerspaces of interest
