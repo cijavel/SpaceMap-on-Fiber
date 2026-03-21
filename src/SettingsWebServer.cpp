@@ -379,8 +379,9 @@ void SettingsWebServer::handleSpaceMapExport(AsyncWebServerRequest* request) {
     }
     out += "\n";
 
-    AsyncWebServerResponse* resp = request->beginResponse(200, "text/plain", out);
+    AsyncWebServerResponse* resp = request->beginResponse(200, "application/octet-stream", out);
     resp->addHeader("Content-Disposition", "attachment; filename=\"searchList.txt\"");
+    resp->addHeader("Content-Transfer-Encoding", "binary");
     request->send(resp);
 }
 
@@ -405,7 +406,9 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
             "<button type='button' class='btn btn-save' style='margin-top:8px' onclick='doImport()'>&#8659; Import</button>";
 
     // --- Editor table ---
-    html += "<style>input.led-input::-webkit-outer-spin-button,input.led-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}</style>"
+    html += "<h2>Active Mapping</h2>"
+            "<style>input.led-input::-webkit-outer-spin-button,input.led-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}</style>"
+            "<form method='POST' action='/spacemap' id='mapForm'>"
             "<table id='mapTable' style='width:100%;border-collapse:collapse;margin-top:8px'>"
             "<thead><tr>"
             "<th style='padding:6px;border-bottom:1px solid #3a3a3a;width:24px'></th>"
@@ -423,15 +426,16 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
     html += "</tbody></table>"
             "<div style='margin-top:12px;display:flex;align-items:center;flex-wrap:wrap;gap:10px'>"
             "<button type='button' class='btn btn-save' style='background:#1a7a3c;margin:0' onclick='addRow()'>&#43; Add row</button>"
-            "<button type='submit' class='btn btn-save' style='margin:0' id='saveBtn'>&#128190; Save</button>"
-            "<div id='dupWarn' style='display:none;padding:6px 14px;border-radius:4px;font-weight:bold;background:#2e0e0e;color:#e74c3c;width:100%'></div>";
-             if (message.length() > 0) {
+            "<button type='submit' class='btn btn-save' style='margin:0' id='saveBtn'>&#128190; Save</button>";
+    if (message.length() > 0) {
         bool isReset = message.indexOf("eset") >= 0;
         bool isError = message.indexOf("rror") >= 0;
         String color = isError ? "#f88" : "#6fcf6f";
         String bg    = isError ? "#2e0e0e" : (isReset ? "#2e1a00" : "#0e2e0e");
-        html += "<span style='padding:6px 14px;border-radius:4px;font-weight:bold;"
+        html += "<span id='saveMsg' style='padding:6px 14px;border-radius:4px;font-weight:bold;"
                 "background:" + bg + ";color:" + color + "'>" + message + "</span>";
+    } else {
+        html += "<span id='saveMsg' style='display:none'></span>";
     }
     html += "</div></form>";
 
@@ -457,14 +461,21 @@ function buildRow(i, led, name, city) {
     return '<tr id="row_'+i+'" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragend="onDragEnd(event)" style="cursor:grab">'
         + '<td style="padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
         + '<td style="padding:4px"><input type="number" name="led_'+i+'" value="'+led+'" min="0" max="255" style="width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px;-moz-appearance:textfield" class="led-input" onchange="onLedChanged(this)"></td>'
-        + '<td style="padding:4px"><input type="text"   name="name_'+i+'" value="'+name+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px"></td>'
-        + '<td style="padding:4px"><input type="text"   name="city_'+i+'" value="'+city+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px"></td>'
+        + '<td style="padding:4px"><input type="text"   name="name_'+i+'" value="'+name+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="markRowDirty(this.closest(\'tr\'))"></td>'
+        + '<td style="padding:4px"><input type="text"   name="city_'+i+'" value="'+city+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="markRowDirty(this.closest(\'tr\'))"></td>'
         + '<td style="padding:4px"><button type="button" onclick="removeRow('+i+')" style="background:#f5a800;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer">&#10005;</button></td>'
         + '</tr>';
 }
 
+function markRowDirty(row) {
+    row.style.borderLeft = '3px solid #1a7a3c';
+    var msg = document.getElementById('saveMsg');
+    if (msg) msg.style.display = 'none';
+}
+
 function addRow() {
     document.getElementById('mapBody').insertAdjacentHTML('beforeend', buildRow(rowCount, rowCount, '', ''));
+    markRowDirty(document.getElementById('mapBody').lastElementChild);
     rowCount++;
 }
 
@@ -506,6 +517,7 @@ function doImport() {
 
 // ---- LED# change handler: resolve collisions then sort ----
 function onLedChanged(inp) {
+    markRowDirty(inp.closest('tr'));
     var newVal = parseInt(inp.value, 10);
     if (isNaN(newVal) || newVal < 0) { inp.value = 0; newVal = 0; }
     if (newVal > 255) { inp.value = 255; newVal = 255; }
@@ -588,11 +600,12 @@ function onDrop(e) {
         } else {
             tbody.insertBefore(dragSrc, target);
         }
-        // Reassign all LED numbers by position after drag
+        // Reassign all LED numbers by position after drag and mark dirty
         var allRows = Array.from(tbody.querySelectorAll('tr'));
         allRows.forEach(function(r, idx) {
             var ledInp = r.querySelector('input.led-input');
             if (ledInp) ledInp.value = idx;
+            markRowDirty(r);
         });
         reindexRows();
     }
@@ -629,8 +642,7 @@ String SettingsWebServer::buildSpaceMapRow(int i, int led, const String& name, c
     return "<tr id='row_" + String(i) + "' draggable='true' ondragstart='onDragStart(event)' ondragover='onDragOver(event)' ondrop='onDrop(event)' ondragend='onDragEnd(event)' style='cursor:grab'>"
            "<td style='padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab' title='Drag to reorder'>&#8597;</td>"
            "<td style='padding:4px'><input type='number' name='led_"  + String(i) + "' value='" + String(led)  + "' min='0' max='255' style='width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px;-moz-appearance:textfield' class='led-input' onchange='onLedChanged(this)'></td>"
-           "<td style='padding:4px'><input type='text'   name='name_" + String(i) + "' value='" + name        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px'></td>"
-           "<td style='padding:4px'><input type='text'   name='city_" + String(i) + "' value='" + city        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px'></td>"
-           "<td style='padding:4px'><button type='button' onclick='removeRow(" + String(i) + ")' style='background:#f5a800;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer'>&#10005;</button></td>"
+           "<td style='padding:4px'><input type='text'   name='name_" + String(i) + "' value='" + name        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px' oninput='markRowDirty(this.closest(String.fromCharCode(116,114)))'></td>"
+           "<td style='padding:4px'><input type='text'   name='city_" + String(i) + "' value='" + city        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px' oninput='markRowDirty(this.closest(String.fromCharCode(116,114)))'></td>"
            "</tr>";
 }
