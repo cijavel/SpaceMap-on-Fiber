@@ -56,6 +56,11 @@ void WiFiHandler::initWifi() {
     // Always print IP so the web UI can be reached even without DEBUG builds.
     Serial.print("WIFI: IP address: ");
     Serial.println(WiFi.localIP());
+
+    // Start mDNS so the device is reachable as http://spacemap.local
+    if (MDNS.begin(DeviceName)) {
+        Serial.println("WIFI: mDNS started -> http://spacemap.local");
+    }
 }
 
 // --------------------------------------------------------------------------

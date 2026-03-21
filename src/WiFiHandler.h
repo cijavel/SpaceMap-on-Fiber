@@ -4,6 +4,7 @@
 #include <WiFi.h> // Rename Credentials_example.h to Credentials.h before building.
 #include "Credentials.h"
 #include "Configuration.h"
+#include <ESPmDNS.h>
 
 // Manages WiFi connection lifecycle: initial connect, periodic health checks,
 // and automatic reboot after too many consecutive failures.
