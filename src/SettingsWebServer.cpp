@@ -457,21 +457,17 @@ void SettingsWebServer::handleSpaceMapReset(AsyncWebServerRequest* request) {
 // --------------------------------------------------------------------------
 void SettingsWebServer::handleSpaceMapExport(AsyncWebServerRequest* request) {
     const auto& list = DataSpaceList::getInstance().getList();
-    String out = "SpaceSearchList searchList[] = {\n";
+    String out = "";
     for (int i = 0; i < (int)list.size(); i++) {
-        char buf[120];
-        snprintf(buf, sizeof(buf), "    {%2d, \"%-40s, \"%s\"}",
-                 list[i].getLED(),
-                 (list[i].getName() + "\"").c_str(),
-                 list[i].city.c_str());
-        out += buf;
-        if (i < (int)list.size() - 1) out += ",";
-        out += "\n";
+        out += "{ " + String(list[i].getLED()) +
+               ", \"" + list[i].getName() +
+               "\", \"" + list[i].city + "\"}";
+        if (i < (int)list.size() - 1) out += ", ";
     }
-    out += "};\n";
+    out += "\n";
 
     AsyncWebServerResponse* resp = request->beginResponse(200, "text/plain", out);
-    resp->addHeader("Content-Disposition", "attachment; filename=\"searchList.cpp\"");
+    resp->addHeader("Content-Disposition", "attachment; filename=\"searchList.txt\"");
     request->send(resp);
 }
 
@@ -493,11 +489,7 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
             "<p style='color:#bbb;font-size:0.9em'>Paste your mapping below and click Import. Expected format:</p>"
             "<pre style='background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:10px;"
             "font-size:0.8em;color:#888;overflow-x:auto;margin:0 0 10px 0;'>"
-            "SpaceSearchList searchList[] = {\n"
-            "    { 0, \"OpenLab Augsburg\"  , \"Augsburg\"},\n"
-            "    { 1, \"IT-Syndikat\"       , \"Innsbruck\"},\n"
-            "    { 2, \"MuCCC\"             , \"Munich\"}\n"
-            "};"
+            "{ 0, \"OpenLab Augsburg\", \"Augsburg\"}, { 1, \"IT-Syndikat\", \"Innsbruck\"}, { 2, \"MuCCC\", \"Munich\"}"
             "</pre>"
             "<textarea id='importArea' rows='8' style='width:100%;background:#1e1e1e;color:#eee;"
             "border:1px solid #3a3a3a;border-radius:4px;padding:7px;font-family:monospace;font-size:0.85em;box-sizing:border-box;'>"
@@ -574,21 +566,14 @@ function removeRow(i) {
 
 function doImport() {
     var raw = document.getElementById('importArea').value;
-    // Extract everything between the first { and the last }
-    var start = raw.indexOf('{');
-    var end   = raw.lastIndexOf('}');
-    if (start === -1 || end === -1) { alert('No valid searchList block found.'); return; }
-    var inner = raw.substring(start + 1, end);
-    // Split on }, { boundaries
-    var entries = inner.split(/\}\s*,\s*\{/);
+    // Split on every { ... } block
     var parsed = [];
-    entries.forEach(function(e) {
-        e = e.replace(/[{}]/g, '').trim();
-        // Format:  led, "name", "city"
-        var m = e.match(/^\s*(\d+)\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*$/);
-        if (m) parsed.push({ led: m[1], name: m[2], city: m[3] });
-    });
-    if (parsed.length === 0) { alert('Could not parse any entries.'); return; }
+    var re = /\{\s*(\d+)\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\}/g;
+    var m;
+    while ((m = re.exec(raw)) !== null) {
+        parsed.push({ led: m[1], name: m[2], city: m[3] });
+    }
+    if (parsed.length === 0) { alert('Could not parse any entries.\nExpected format:\n{ 0, "Name", "City"}, { 1, "Name", "City"}'); return; }
     var tbody = document.getElementById('mapBody');
     tbody.innerHTML = '';
     rowCount = 0;
