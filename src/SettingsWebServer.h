@@ -40,6 +40,7 @@ private:
     // HTML page builders
     static String buildIndexPage(const String& message = "");
     static String buildSettingsPage(const String& message = "");
+    static String buildSpaceMapPage(const String& message = "");
     static String htmlHeader(const String& title);
     static String htmlFooter();
     static String navBar();
