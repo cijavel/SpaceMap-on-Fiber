@@ -18,6 +18,14 @@ void SettingsWebServer::begin() {
 // Register all URL routes on the async web server.
 // --------------------------------------------------------------------------
 void SettingsWebServer::registerRoutes() {
+    _httpsServer.on("/", HTTP_GET, [this](AsyncWebServerRequest* req) {
+        handleHttpsRedirect(req);
+    });
+    _httpsServer.onNotFound([this](AsyncWebServerRequest* req) {
+        handleHttpsRedirect(req);
+    });
+    _httpsServer.begin();
+
     _server.on("/", HTTP_GET, [this](AsyncWebServerRequest* req) {
         handleIndex(req);
     });
@@ -156,6 +164,18 @@ void SettingsWebServer::handleNotFound(AsyncWebServerRequest* request) {
         "<h2>404 - Page not found</h2>"
         "<p><a href='/'>Back to home</a></p>" +
         htmlFooter());
+}
+
+void SettingsWebServer::handleHttpsRedirect(AsyncWebServerRequest* request) {
+    String html = "<!DOCTYPE html><html><head>"
+                  "<meta http-equiv='refresh' content='0;url=http://" +
+                  WiFi.localIP().toString() + request->url() + "'>"
+                  "</head><body>"
+                  "<p>Redirecting to <a href='http://" +
+                  WiFi.localIP().toString() + request->url() + "'>http://" +
+                  WiFi.localIP().toString() + request->url() + "</a></p>"
+                  "</body></html>";
+    request->send(200, "text/html", html);
 }
 
 // --------------------------------------------------------------------------

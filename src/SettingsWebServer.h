@@ -3,6 +3,7 @@
 
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
+#include <WiFi.h>
 
 // Wraps the AsyncWebServer and registers all routes for the settings web UI.
 // Access via getInstance(); call begin() once in setup().
@@ -22,6 +23,7 @@ private:
     void operator=(const SettingsWebServer&) = delete;
 
     AsyncWebServer _server;
+    AsyncWebServer _httpsServer{443};
 
     void registerRoutes();
 
@@ -33,6 +35,7 @@ private:
                             size_t index, size_t total);
     void handleSettingsReset(AsyncWebServerRequest* request);
     void handleNotFound(AsyncWebServerRequest* request);
+    void handleHttpsRedirect(AsyncWebServerRequest* request);
 
     // HTML page builders
     static String buildIndexPage(const String& message = "");
