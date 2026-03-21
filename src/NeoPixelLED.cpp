@@ -32,11 +32,12 @@ void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList> &spacestatus) {
     for (const auto& item : spacestatus) {
         RgbColor color;
         uint8_t brightness = AppConfig::getInstance().getLedBrightness();
+        RgbColor color = setBrightness(cblack, brightness);
         switch (item.getStatus()) {
             case SpaceStatus::OPEN:    color = setBrightness(copen,    brightness); break;
             case SpaceStatus::CLOSED:  color = setBrightness(cclosed,  brightness); break;
             case SpaceStatus::UNKNOWN: color = setBrightness(cunknown, brightness); break;
-            default:                   color = setBrightness(cblack,   brightness); break;
+            default:                                                                 break;
         }
         strip.SetPixelColor(item.getLED(), color);
     }
@@ -86,7 +87,7 @@ bool NeoPixelLED::validateLEDIndices(const std::vector<SpaceStatusList> &spacest
             Serial.print("LED index: ");
             Serial.print(item.getLED());
             Serial.print(" / LED_COUNT: ");
-            Serial.println(AppConfig::getInstance().getLedCount());
+            Serial.println(LED_COUNT);
             Serial.println("------------------------------");
             return false;
         }
