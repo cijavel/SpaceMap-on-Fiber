@@ -64,7 +64,12 @@ void SettingsWebServer::handleSettingsPost(AsyncWebServerRequest* request,
     String& body = *reinterpret_cast<String*>(request->_tempObject);
     body += String((const char*)data, len);
 
-    if (index + len < total) return; // noch nicht vollständig
+    if (index + len < total) return; // noch nicht vollständig – _tempObject wird
+    // vom ESPAsyncWebServer bei Abbruch NICHT automatisch freigegeben.
+    // onDisconnect-Cleanup ist hier nicht möglich ohne Request-Lifetime-Tracking.
+    // Stattdessen: onBody wird nur bei vollständigem Request mit total==len aufgerufen,
+    // daher sicherer Reset durch expliziten Guard:
+    if (!request->_tempObject) return;
 
     AppConfig& cfg = AppConfig::getInstance();
 
