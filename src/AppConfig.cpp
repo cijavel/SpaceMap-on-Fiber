@@ -1,4 +1,5 @@
 #include "AppConfig.h"
+#include "DataSpaceList.h"
 
 // NVS namespace – must be 15 characters or fewer.
 static const char* NVS_NAMESPACE = "spacemap";
@@ -70,13 +71,16 @@ void AppConfig::saveSpaceMap(const uint8_t* led, const String* name, const Strin
 
 void AppConfig::resetSpaceMap() {
     if (!_prefs.begin(NVS_NAMESPACE, /*readOnly=*/false)) return;
+    // Read the stored count first so we can clean up all individual entry keys.
+    // Use SPACEMAP_MAX_ENTRIES as upper bound in case smCount itself is corrupt.
     int count = (int)_prefs.getInt("smCount", 0);
-    _prefs.remove("smCount");
+    if (count <= 0 || count > SPACEMAP_MAX_ENTRIES) count = SPACEMAP_MAX_ENTRIES;
     for (int i = 0; i < count; i++) {
         _prefs.remove(("smL" + String(i)).c_str());
         _prefs.remove(("smN" + String(i)).c_str());
         _prefs.remove(("smC" + String(i)).c_str());
     }
+    _prefs.remove("smCount");
     _prefs.end();
 }
 
