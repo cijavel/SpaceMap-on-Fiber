@@ -81,6 +81,18 @@ void setup() {
     neoLED.initLEDs();
     neoLED.enumerateLEDs(500);
 
+    // Fetch space status once immediately so the web UI shows data from the
+    // very first page load instead of waiting for the first 120-second poll.
+    neopixelWrite(RGB_BUILTIN, 0, 0, AppConfig::getInstance().getOnboardBrightness()); // BLUE
+    WebClientHandler::getSpaceStatus(spaceStatusList, AppConfig::getInstance().getSpaceApiUrl());
+    lastApiCall = millis();
+
+    if (WiFiClass::status() == WL_CONNECTED) {
+        neopixelWrite(RGB_BUILTIN, 0, AppConfig::getInstance().getOnboardBrightness(), 0); // GREEN
+    } else {
+        neopixelWrite(RGB_BUILTIN, AppConfig::getInstance().getOnboardBrightness(), 0, 0); // RED
+    }
+
     #ifdef RGB_BUILTIN
         digitalWrite(RGB_BUILTIN, LOW);
     #endif
