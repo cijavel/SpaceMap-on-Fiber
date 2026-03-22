@@ -107,9 +107,9 @@ void DataSpaceList::resetToDefault() {
         _list.push_back(defaultSearchList[i]);
     }
     _loaded = true;
-    // Overwrite NVS with the default list in a single open/close cycle.
-    // Do NOT call resetSpaceMap() first — opening NVS twice in quick
-    // succession after a remove() is unreliable on ESP32.
+    // Clear NVS first so stale keys from a previously longer list cannot
+    // survive, then write the defaults in a fresh open/close cycle.
+    AppConfig::getInstance().resetSpaceMap();
     uint8_t led[SPACEMAP_MAX_ENTRIES];
     String  name[SPACEMAP_MAX_ENTRIES];
     String  city[SPACEMAP_MAX_ENTRIES];

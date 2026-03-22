@@ -518,9 +518,10 @@ function doImport(append) {
         markRowDirty(tbody.lastElementChild);
         rowCount++;
     });
+    sortTableByLed();
     document.getElementById('importArea').value = '';
 }
-
+    
 // ---- LED# change handler: resolve collisions then sort ----
 function onLedChanged(inp) {
     markRowDirty(inp.closest('tr'));
