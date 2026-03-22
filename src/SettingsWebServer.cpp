@@ -74,8 +74,7 @@ void SettingsWebServer::registerRoutes() {
 
     _server.on("/api/spacestatus", HTTP_GET, [this](AsyncWebServerRequest* req) {
         // Returns the current SpaceAPI status for every tracked space as a JSON array.
-        // Each entry: {"name":"<space name>","status":"OPEN"|"CLOSED"|"UNKNOWN","led":<index>}
-        // Returns empty array if no API fetch has completed yet.
+        // Each entry: {"name":"<space name>","status":"OPEN"|"CLOSED"|"UNKNOWN"}
         String json = "[";
         for (size_t i = 0; i < spaceStatusList.size(); i++) {
             const auto& e = spaceStatusList[i];
@@ -764,40 +763,42 @@ function blinkLed(btn) {
 }
 
 // Fetch current SpaceAPI status from device and update each row's status span.
-// Matching is done by LED index (reliable even if space names differ slightly),
-// with a case-insensitive name fallback.
+// Primary match: LED index (integer, unambiguous).
+// Fallback match: trimmed lower-case name (catches minor whitespace differences).
 function updateSpaceStatus() {
     fetch('/api/spacestatus')
         .then(function(r) { return r.json(); })
         .then(function(list) {
             if (list.length === 0) {
-                // API has not returned data yet — show a neutral hint on all rows.
-                document.querySelectorAll('#mapBody .space-status').forEach(function(span) {
-                    span.style.color = '#555';
-                    span.innerHTML   = '<span title="No API data yet">&#8212;</span>';
+                // API has not returned data yet – leave dashes, add tooltip.
+                document.querySelectorAll('#mapBody .space-status').forEach(function(s) {
+                    s.style.color = '#555';
+                    s.title       = 'No API data yet – wait for first poll';
+                    s.innerHTML   = '&#8212;';
                 });
                 return;
             }
 
-            // Build two lookup maps: by LED index (primary) and by lower-cased name (fallback).
+            // Build lookup maps.
             var byLed  = {};
             var byName = {};
             list.forEach(function(e) {
-                byLed[e.led]              = e.status;
-                byName[e.name.toLowerCase().trim()] = e.status;
+                byLed[e.led]                           = e.status;
+                byName[e.name.toLowerCase().trim()]    = e.status;
             });
 
             document.querySelectorAll('#mapBody tr').forEach(function(row) {
                 var ledInput  = row.querySelector('input.led-input');
-                var nameInput = row.querySelectorAll('input')[1]; // index 1 = name field
+                var nameInput = row.querySelectorAll('input')[1];
                 var span      = row.querySelector('.space-status');
                 if (!ledInput || !nameInput || !span) return;
 
                 var led    = parseInt(ledInput.value, 10);
-                var status = byLed[led] !== undefined
+                var status = (byLed[led] !== undefined)
                              ? byLed[led]
                              : byName[nameInput.value.toLowerCase().trim()];
 
+                span.title = '';
                 if (status === 'OPEN') {
                     span.style.color = '#2dbe60';
                     span.innerHTML   = '&#9679; OPEN';
@@ -808,17 +809,16 @@ function updateSpaceStatus() {
                     span.style.color = '#4a90d9';
                     span.innerHTML   = '&#9679; UNKNOWN';
                 } else {
-                    // LED index not in status list — space not matched by API
                     span.style.color = '#555';
                     span.innerHTML   = '&#8212;';
                 }
             });
         })
-        .catch(function(err) {
-            document.querySelectorAll('#mapBody .space-status').forEach(function(span) {
-                span.style.color = '#e74c3c';
-                span.innerHTML   = '&#9888;';
-                span.title       = 'Status fetch failed';
+        .catch(function() {
+            document.querySelectorAll('#mapBody .space-status').forEach(function(s) {
+                s.style.color = '#e74c3c';
+                s.title       = 'Status fetch failed';
+                s.innerHTML   = '&#9888;';
             });
         });
 }
