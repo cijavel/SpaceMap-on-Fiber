@@ -188,7 +188,7 @@ String SettingsWebServer::htmlHeader(const String& title) {
         "input:focus{outline:2px solid #1a7a3c;border-color:#1a7a3c;}"
         ".btn{display:inline-block;margin-top:20px;padding:10px 24px;"
         "border:none;border-radius:5px;cursor:pointer;font-size:1em;font-weight:bold;}"
-        ".btn-save{background:#1a7a3c;color:#111;}"
+        ".btn-save{background:#1a7a3c;color:#fff;}"
         ".btn-save:hover{background:#2d9e55;}"
         ".btn-reset{background:#f5a800;color:#fff;margin-left:12px;}"
         ".btn-reset:hover{background:#ffc030;}"

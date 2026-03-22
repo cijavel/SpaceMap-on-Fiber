@@ -59,7 +59,16 @@ int AppConfig::loadSpaceMap(uint8_t* ledOut, String* nameOut, String* cityOut, i
 }
 
 void AppConfig::saveSpaceMap(const uint8_t* led, const String* name, const String* city, int count) {
-    if (!_prefs.begin(NVS_NAMESPACE, /*readOnly=*/false)) return;
+    // Always call end() first in case the handle is still open from a previous call.
+    _prefs.end();
+    // Retry up to 3 times — ESP32 NVS can transiently fail to open after
+    // a previous write cycle (e.g. right after resetSpaceMap).
+    bool opened = false;
+    for (int attempt = 0; attempt < 3 && !opened; attempt++) {
+        opened = _prefs.begin(NVS_NAMESPACE, /*readOnly=*/false);
+        if (!opened) delay(10);
+    }
+    if (!opened) return;
     _prefs.putInt("smCount", count);
     for (int i = 0; i < count; i++) {
         _prefs.putInt(("smL" + String(i)).c_str(), led[i]);
