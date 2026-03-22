@@ -2,6 +2,7 @@
 #include "AppConfig.h"
 #include "Configuration.h"
 #include "DataSpaceList.h"
+#include "NeoPixelLED.h"
 #include "WebClientHandler.h"
 #include <ArduinoJson.h>
 
@@ -53,6 +54,10 @@ void SettingsWebServer::registerRoutes() {
 
     _server.on("/spacemap/export", HTTP_GET, [this](AsyncWebServerRequest* req) {
         handleSpaceMapExport(req);
+    });
+
+    _server.on("/spacemap/blink", HTTP_GET, [this](AsyncWebServerRequest* req) {
+        handleSpaceMapBlink(req);
     });
 
     _server.on("/spacemap", HTTP_GET, [this](AsyncWebServerRequest* req) {
@@ -370,6 +375,24 @@ void SettingsWebServer::handleSpaceMapReset(AsyncWebServerRequest* request) {
 }
 
 // --------------------------------------------------------------------------
+// /spacemap/blink  – GET: blink one LED for physical position identification
+// --------------------------------------------------------------------------
+void SettingsWebServer::handleSpaceMapBlink(AsyncWebServerRequest* request) {
+    if (!request->hasParam("led")) {
+        request->send(400, "application/json", "{\"ok\":false,\"error\":\"missing led param\"}");
+        return;
+    }
+    int ledIndex = request->getParam("led")->value().toInt();
+    if (ledIndex < 0 || ledIndex >= LED_COUNT) {
+        request->send(400, "application/json", "{\"ok\":false,\"error\":\"led index out of range\"}");
+        return;
+    }
+    std::vector<SpaceStatusList> empty;
+    NeoPixelLED::getInstance().blinkLED((uint8_t)ledIndex, empty);
+    request->send(200, "application/json", "{\"ok\":true}");
+}
+
+// --------------------------------------------------------------------------
 // /spacemap/export  – GET: deliver a .cpp snippet as plain text download
 // --------------------------------------------------------------------------
 void SettingsWebServer::handleSpaceMapExport(AsyncWebServerRequest* request) {
@@ -670,6 +693,22 @@ function doExport() {
     URL.revokeObjectURL(a.href);
 }
 
+function blinkLed(ledIndex, btn) {
+    var orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '&#8987;';
+    fetch('/spacemap/blink?led=' + ledIndex)
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            btn.innerHTML = d.ok ? '&#10003;' : '&#10005;';
+            setTimeout(function(){ btn.innerHTML = orig; btn.disabled = false; }, 1500);
+        })
+        .catch(function(){
+            btn.innerHTML = '&#10005;';
+            setTimeout(function(){ btn.innerHTML = orig; btn.disabled = false; }, 1500);
+        });
+}
+
 function reindexRows() {
     var rows = document.getElementById('mapBody').querySelectorAll('tr');
     rowCount = 0;
@@ -678,8 +717,8 @@ function reindexRows() {
         var inputs = r.querySelectorAll('input');
         var types = ['led_', 'name_', 'city_'];
         inputs.forEach(function(inp, j) { inp.name = types[j] + rowCount; });
-        var btn = r.querySelector('button');
-        if (btn) btn.setAttribute('onclick', 'removeRow(' + rowCount + ')');
+        var btns = r.querySelectorAll('button');
+        if (btns.length >= 2) btns[1].setAttribute('onclick', 'removeRow(' + rowCount + ')');
         rowCount++;
     });
 }
@@ -696,6 +735,9 @@ String SettingsWebServer::buildSpaceMapRow(int i, int led, const String& name, c
            "<td style='padding:4px'><input type='number' name='led_"  + String(i) + "' value='" + String(led)  + "' min='0' max='255' style='width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px;-moz-appearance:textfield' class='led-input' onchange='onLedChanged(this)'></td>"
            "<td style='padding:4px'><input type='text'   name='name_" + String(i) + "' value='" + name        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px' oninput='markRowDirty(this.closest(\"tr\"))'></td>"
            "<td style='padding:4px'><input type='text'   name='city_" + String(i) + "' value='" + city        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px' oninput='markRowDirty(this.closest(\"tr\"))'></td>"
-           "<td style='padding:4px'><button type='button' onclick='removeRow(" + String(i) + ")' style='background:#f5a800;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer'>&#10005;</button></td>"
+           "<td style='padding:4px;white-space:nowrap'>"\
+           "<button type='button' onclick='blinkLed(" + String(led) + ",this)' style='background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;margin-right:4px' title='Blink to locate'>&#128294;</button>"\
+           "<button type='button' onclick='removeRow(" + String(i) + ")' style='background:#f5a800;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer'>&#10005;</button>"\
+           "</td>"\
            "</tr>";
 }

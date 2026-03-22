@@ -25,6 +25,9 @@ public:
     // Update the strip to reflect the current open/closed status of each tracked space.
     void updateLEDs(std::vector<SpaceStatusList>& spaceStatusList);
 
+    // Blink a single LED white 10x (150ms on/off), then restore the full strip status.
+    void blinkLED(uint8_t ledIndex, std::vector<SpaceStatusList>& spaceStatusList);
+
 private:
     NeoPixelLED() {}
     NeoPixelLED(NeoPixelLED const&) = delete;

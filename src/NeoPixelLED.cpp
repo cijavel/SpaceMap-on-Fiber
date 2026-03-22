@@ -48,6 +48,25 @@ void NeoPixelLED::updateLEDs(std::vector<SpaceStatusList>& spaceStatusList) {
 }
 
 // --------------------------------------------------------------------------
+// Blink a single LED white 10x (150ms on/off), then restore strip status.
+// --------------------------------------------------------------------------
+void NeoPixelLED::blinkLED(uint8_t ledIndex, std::vector<SpaceStatusList>& spaceStatusList) {
+    uint8_t brightness = AppConfig::getInstance().getLedBrightness();
+    RgbColor white = scaleBrightness(colorWhite, brightness);
+
+    for (int i = 0; i < 10; i++) {
+        strip.SetPixelColor(ledIndex, white);
+        strip.Show();
+        delay(150);
+        strip.SetPixelColor(ledIndex, colorOff);
+        strip.Show();
+        delay(150);
+    }
+
+    updateLEDs(spaceStatusList);
+}
+
+// --------------------------------------------------------------------------
 // LED startup sequence: cycle each LED through open/closed/unknown colors.
 // delayMs is the total time (ms) spent on each LED position.
 // --------------------------------------------------------------------------
