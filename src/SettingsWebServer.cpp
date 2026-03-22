@@ -72,6 +72,25 @@ void SettingsWebServer::registerRoutes() {
         handleSpaceMapPost(req);
     });
 
+    _server.on("/api/spacestatus", HTTP_GET, [this](AsyncWebServerRequest* req) {
+        // Returns the current SpaceAPI status for every tracked space as a JSON array.
+        // Each entry: {"name":"<space name>","status":"OPEN"|"CLOSED"|"UNKNOWN"}
+        String json = "[";
+        for (size_t i = 0; i < spaceStatusList.size(); i++) {
+            const auto& e = spaceStatusList[i];
+            String statusStr;
+            switch (e.getStatus()) {
+                case SpaceStatus::OPEN:    statusStr = "OPEN";    break;
+                case SpaceStatus::CLOSED:  statusStr = "CLOSED";  break;
+                default:                   statusStr = "UNKNOWN"; break;
+            }
+            if (i > 0) json += ",";
+            json += "{\"name\":\"" + e.getName() + "\",\"status\":\"" + statusStr + "\"}";
+        }
+        json += "]";
+        req->send(200, "application/json", json);
+    });
+
     _server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest* req) {
         int code = WebClientHandler::getLastHttpCode();
         unsigned long age = (WebClientHandler::getLastAttemptMs() == 0)
@@ -518,7 +537,7 @@ var rowCount = )rawjs" + String(list.size()) + R"rawjs(;
 function buildRow(i, led, name, city) {
     return '<tr id="row_'+i+'" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragend="onDragEnd(event)" style="cursor:grab">'
         + '<td style="padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
-        + '<td style="padding:4px;text-align:center"><button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="Blink to locate">&#128294;</button></td>'
+        + '<td style="padding:4px;text-align:center;white-space:nowrap"><button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="Blink to locate">&#128294;</button><span class="space-status" style="margin-left:6px;font-size:0.82em;vertical-align:middle;color:#888">&#8212;</span></td>'
         + '<td style="padding:4px"><input type="number" name="led_'+i+'" value="'+led+'" min="0" max="255" style="width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px;-moz-appearance:textfield" class="led-input" onchange="onLedChanged(this)"></td>'
         + '<td style="padding:4px"><input type="text"   name="name_'+i+'" value="'+name+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="markRowDirty(this.closest(\'tr\'))"></td>'
         + '<td style="padding:4px"><input type="text"   name="city_'+i+'" value="'+city+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="markRowDirty(this.closest(\'tr\'))"></td>'
@@ -741,6 +760,42 @@ function blinkLed(btn) {
         });
 }
 
+// Fetch current SpaceAPI status from device and update each row's status span.
+// Matching is done by space name (name input value vs. JSON "name" field).
+function updateSpaceStatus() {
+    fetch('/api/spacestatus')
+        .then(function(r) { return r.json(); })
+        .then(function(list) {
+            // Build a lookup map: name -> status string
+            var statusMap = {};
+            list.forEach(function(e) { statusMap[e.name] = e.status; });
+
+            document.querySelectorAll('#mapBody tr').forEach(function(row) {
+                var nameInput = row.querySelectorAll('input')[1]; // index 1 = name field
+                var span      = row.querySelector('.space-status');
+                if (!nameInput || !span) return;
+                var status = statusMap[nameInput.value];
+                if (status === 'OPEN') {
+                    span.style.color   = '#2dbe60';
+                    span.innerHTML     = '&#9679; OPEN';
+                } else if (status === 'CLOSED') {
+                    span.style.color   = '#e74c3c';
+                    span.innerHTML     = '&#9679; CLOSED';
+                } else if (status === 'UNKNOWN') {
+                    span.style.color   = '#4a90d9';
+                    span.innerHTML     = '&#9679; UNKNOWN';
+                } else {
+                    span.style.color   = '#555';
+                    span.innerHTML     = '&#8212;';
+                }
+            });
+        })
+        .catch(function() { /* silently ignore if device unreachable */ });
+}
+
+// Fetch space status once on page load.
+updateSpaceStatus();
+
 function reindexRows() {
     var rows = document.getElementById('mapBody').querySelectorAll('tr');
     rowCount = 0;
@@ -765,7 +820,7 @@ function reindexRows() {
 String SettingsWebServer::buildSpaceMapRow(int i, int led, const String& name, const String& city) {
     return "<tr id='row_" + String(i) + "' draggable='true' ondragstart='onDragStart(event)' ondragover='onDragOver(event)' ondrop='onDrop(event)' ondragend='onDragEnd(event)' style='cursor:grab'>"
            "<td style='padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab' title='Drag to reorder'>&#8597;</td>"
-           "<td style='padding:4px;text-align:center'><button type='button' class='btn-blink' onclick='blinkLed(this)' style='background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer' title='Blink to locate'>&#128294;</button></td>"
+           "<td style='padding:4px;text-align:center;white-space:nowrap'><button type='button' class='btn-blink' onclick='blinkLed(this)' style='background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer' title='Blink to locate'>&#128294;</button><span class='space-status' style='margin-left:6px;font-size:0.82em;vertical-align:middle;color:#888'>&#8212;</span></td>"
            "<td style='padding:4px'><input type='number' name='led_"  + String(i) + "' value='" + String(led)  + "' min='0' max='255' style='width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px;-moz-appearance:textfield' class='led-input' onchange='onLedChanged(this)'></td>"
            "<td style='padding:4px'><input type='text'   name='name_" + String(i) + "' value='" + name        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px' oninput='markRowDirty(this.closest(\"tr\"))'></td>"
            "<td style='padding:4px'><input type='text'   name='city_" + String(i) + "' value='" + city        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px' oninput='markRowDirty(this.closest(\"tr\"))'></td>"
