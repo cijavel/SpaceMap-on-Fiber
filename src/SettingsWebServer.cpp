@@ -487,7 +487,10 @@ function removeRow(i) {
     var row = document.getElementById('row_'+i);
     if (row) row.remove();
     reindexRows();
-    document.getElementById('mapBody').querySelectorAll('tr').forEach(function(r) {
+    // Renumber LED# values to stay contiguous after deletion
+    document.getElementById('mapBody').querySelectorAll('tr').forEach(function(r, idx) {
+        var ledInp = r.querySelector('input.led-input');
+        if (ledInp) ledInp.value = idx;
         markRowDirty(r);
     });
 }
