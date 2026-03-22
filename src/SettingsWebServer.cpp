@@ -5,6 +5,10 @@
 #include "NeoPixelLED.h"
 #include "WebClientHandler.h"
 #include <ArduinoJson.h>
+#include <freertos/task.h>
+
+// Live-Statusliste aus main.cpp – wird für die LED-Wiederherstellung nach dem Blinken benötigt.
+extern std::vector<SpaceStatusList> spaceStatusList;
 
 // --------------------------------------------------------------------------
 // Public interface
@@ -387,9 +391,21 @@ void SettingsWebServer::handleSpaceMapBlink(AsyncWebServerRequest* request) {
         request->send(400, "application/json", "{\"ok\":false,\"error\":\"led index out of range\"}");
         return;
     }
-    std::vector<SpaceStatusList> empty;
-    NeoPixelLED::getInstance().blinkLED((uint8_t)ledIndex, empty);
+    // Antwort sofort senden – kein Blockieren des async_tcp-Tasks.
     request->send(200, "application/json", "{\"ok\":true}");
+
+    // Blink in separatem FreeRTOS-Task ausführen, damit delay() den
+    // Webserver-Task nicht für 3 Sekunden einfriert.
+    struct BlinkParams { uint8_t ledIndex; };
+    auto* p = new BlinkParams{(uint8_t)ledIndex};
+    xTaskCreate([](void* arg) {
+        auto* bp = static_cast<BlinkParams*>(arg);
+        // Übergibt die echte Statusliste → LED wird nach dem Blinken
+        // korrekt in ihre Statusfarbe zurückgesetzt (Bug 1 Fix).
+        NeoPixelLED::getInstance().blinkLED(bp->ledIndex, spaceStatusList);
+        delete bp;
+        vTaskDelete(nullptr);
+    }, "blink_task", 2048, p, 1, nullptr);
 }
 
 // --------------------------------------------------------------------------
