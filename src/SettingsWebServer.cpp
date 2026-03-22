@@ -403,7 +403,10 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
             "<textarea id='importArea' rows='8' style='width:100%;background:#1e1e1e;color:#eee;"
             "border:1px solid #3a3a3a;border-radius:4px;padding:7px;font-family:monospace;font-size:0.85em;box-sizing:border-box;'>"
             "</textarea>"
-            "<button type='button' class='btn btn-save' style='margin-top:8px' onclick='doImport()'>&#8659; Import</button>";
+            "<div style='margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap'>"
+            "<button type='button' class='btn btn-save' style='margin:0' onclick='doImport(false)'>&#8659; Import (ersetzen)</button>"
+            "<button type='button' class='btn btn-save' style='margin:0;background:#2a5a2a' onclick='doImport(true)'>&#43; Import (anh&auml;ngen)</button>"
+            "</div>";
 
     // --- Editor table ---
     html += "<h2>Active Mapping</h2>"
@@ -483,19 +486,13 @@ function addRow() {
 function removeRow(i) {
     var row = document.getElementById('row_'+i);
     if (row) row.remove();
-    // Re-index remaining rows so the POST fields are contiguous.
-    var rows = document.getElementById('mapBody').querySelectorAll('tr');
-    rowCount = 0;
-    rows.forEach(function(r) {
-        r.id = 'row_' + rowCount;
-        var inputs = r.querySelectorAll('input');
-        var types = ['led_', 'name_', 'city_'];
-        inputs.forEach(function(inp, j) { inp.name = types[j] + rowCount; });
-        rowCount++;
+    reindexRows();
+    document.getElementById('mapBody').querySelectorAll('tr').forEach(function(r) {
+        markRowDirty(r);
     });
 }
 
-function doImport() {
+function doImport(append) {
     var raw = document.getElementById('importArea').value;
     var parsed = [];
     var re = /\{\s*(\d+)\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\}/g;
@@ -504,13 +501,15 @@ function doImport() {
         parsed.push({ led: parseInt(m[1], 10), name: m[2], city: m[3] });
     }
     if (parsed.length === 0) { alert('Could not parse any entries.\nExpected format:\n{ 0, "Name", "City"}, { 1, "Name", "City"}'); return; }
-    // Sort imported entries by LED# before inserting
     parsed.sort(function(a, b) { return a.led - b.led; });
     var tbody = document.getElementById('mapBody');
-    tbody.innerHTML = '';
-    rowCount = 0;
+    if (!append) {
+        tbody.innerHTML = '';
+        rowCount = 0;
+    }
     parsed.forEach(function(p) {
         tbody.insertAdjacentHTML('beforeend', buildRow(rowCount, p.led, p.name, p.city));
+        markRowDirty(tbody.lastElementChild);
         rowCount++;
     });
     document.getElementById('importArea').value = '';
