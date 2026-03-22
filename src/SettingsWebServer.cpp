@@ -420,21 +420,6 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
     String html = htmlHeader("SpaceMap") + navBar();
     html += "<h1>LED &#8596; Hackerspace Mapping</h1>";
 
-    // --- Import area ---
-    html += "<h2>Import</h2>"
-            "<p style='color:#bbb;font-size:0.9em'>Paste your mapping below and click Import. Expected format:</p>"
-            "<pre style='background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:10px;"
-            "font-size:0.8em;color:#888;overflow-x:auto;margin:0 0 10px 0;'>"
-            "{ 0, \"OpenLab Augsburg\", \"Augsburg\"}, { 1, \"IT-Syndikat\", \"Innsbruck\"}, { 2, \"MuCCC\", \"Munich\"}"
-            "</pre>"
-            "<textarea id='importArea' rows='8' style='width:100%;background:#1e1e1e;color:#eee;"
-            "border:1px solid #3a3a3a;border-radius:4px;padding:7px;font-family:monospace;font-size:0.85em;box-sizing:border-box;'>"
-            "</textarea>"
-            "<div style='margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap'>"
-            "<button type='button' class='btn btn-save' style='margin:0' onclick='doImport(false)'>&#8659; Import (ersetzen)</button>"
-            "<button type='button' class='btn btn-save' style='margin:0;background:#2a5a2a' onclick='doImport(true)'>&#43; Import (anh&auml;ngen)</button>"
-            "</div>";
-
     // --- Editor table ---
     html += "<h2>Active Mapping</h2>"
             "<style>input.led-input::-webkit-outer-spin-button,input.led-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}</style>"
@@ -442,6 +427,7 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
             "<table id='mapTable' style='width:100%;border-collapse:collapse;margin-top:8px'>"
             "<thead><tr>"
             "<th style='padding:6px;border-bottom:1px solid #3a3a3a;width:24px'></th>"
+            "<th style='padding:6px;border-bottom:1px solid #3a3a3a;width:36px'></th>"
             "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a'>LED#</th>"
             "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a'>Space Name</th>"
             "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a'>City</th>"
@@ -469,6 +455,22 @@ String SettingsWebServer::buildSpaceMapPage(const String& message) {
     }
     html += "</div></form>";
 
+    // --- Import area ---
+    html += "<h2>Import</h2>"
+            "<p style='color:#bbb;font-size:0.9em'>Paste your mapping below and click Import. Expected format:</p>"
+            "<pre style='background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:10px;"
+            "font-size:0.8em;color:#888;overflow-x:auto;margin:0 0 10px 0;'>"
+            "{ 0, \"OpenLab Augsburg\", \"Augsburg\"}, { 1, \"IT-Syndikat\", \"Innsbruck\"}, { 2, \"MuCCC\", \"Munich\"}"
+            "</pre>"
+            "<textarea id='importArea' rows='8' style='width:100%;background:#1e1e1e;color:#eee;"
+            "border:1px solid #3a3a3a;border-radius:4px;padding:7px;font-family:monospace;font-size:0.85em;box-sizing:border-box;'>"
+            "</textarea>"
+            "<div style='margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap'>"
+            "<button type='button' class='btn btn-save' style='margin:0' onclick='doImport(false)'>&#8659; Import (ersetzen)</button>"
+            "<button type='button' class='btn btn-save' style='margin:0;background:#2a5a2a' onclick='doImport(true)'>&#43; Import (anh&auml;ngen)</button>"
+            "</div>";
+
+
     // --- Export ---
     html += "<h2>Export</h2>"
             "<p style='color:#bbb;font-size:0.9em'>Downloads the current mapping as a <code>searchList.cpp</code> snippet "
@@ -490,6 +492,7 @@ var rowCount = )rawjs" + String(list.size()) + R"rawjs(;
 function buildRow(i, led, name, city) {
     return '<tr id="row_'+i+'" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragend="onDragEnd(event)" style="cursor:grab">'
         + '<td style="padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
+        + '<td style="padding:4px;text-align:center"><button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="Blink to locate">&#128294;</button></td>'
         + '<td style="padding:4px"><input type="number" name="led_'+i+'" value="'+led+'" min="0" max="255" style="width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px;-moz-appearance:textfield" class="led-input" onchange="onLedChanged(this)"></td>'
         + '<td style="padding:4px"><input type="text"   name="name_'+i+'" value="'+name+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="markRowDirty(this.closest(\'tr\'))"></td>'
         + '<td style="padding:4px"><input type="text"   name="city_'+i+'" value="'+city+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="markRowDirty(this.closest(\'tr\'))"></td>'
@@ -693,7 +696,10 @@ function doExport() {
     URL.revokeObjectURL(a.href);
 }
 
-function blinkLed(ledIndex, btn) {
+function blinkLed(btn) {
+    // Always read the current LED# from the input in the same row,
+    // so the correct LED is used even after drag-and-drop reordering.
+    var ledIndex = parseInt(btn.closest('tr').querySelector('input.led-input').value, 10);
     var orig = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '&#8987;';
@@ -719,6 +725,7 @@ function reindexRows() {
         inputs.forEach(function(inp, j) { inp.name = types[j] + rowCount; });
         var btns = r.querySelectorAll('button');
         if (btns.length >= 2) btns[1].setAttribute('onclick', 'removeRow(' + rowCount + ')');
+        // Blink button always reads LED# from the input at click time — no reindex needed.
         rowCount++;
     });
 }
@@ -732,12 +739,10 @@ function reindexRows() {
 String SettingsWebServer::buildSpaceMapRow(int i, int led, const String& name, const String& city) {
     return "<tr id='row_" + String(i) + "' draggable='true' ondragstart='onDragStart(event)' ondragover='onDragOver(event)' ondrop='onDrop(event)' ondragend='onDragEnd(event)' style='cursor:grab'>"
            "<td style='padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab' title='Drag to reorder'>&#8597;</td>"
+           "<td style='padding:4px;text-align:center'><button type='button' class='btn-blink' onclick='blinkLed(this)' style='background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer' title='Blink to locate'>&#128294;</button></td>"
            "<td style='padding:4px'><input type='number' name='led_"  + String(i) + "' value='" + String(led)  + "' min='0' max='255' style='width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px;-moz-appearance:textfield' class='led-input' onchange='onLedChanged(this)'></td>"
            "<td style='padding:4px'><input type='text'   name='name_" + String(i) + "' value='" + name        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px' oninput='markRowDirty(this.closest(\"tr\"))'></td>"
            "<td style='padding:4px'><input type='text'   name='city_" + String(i) + "' value='" + city        + "' style='width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px' oninput='markRowDirty(this.closest(\"tr\"))'></td>"
-           "<td style='padding:4px;white-space:nowrap'>"\
-           "<button type='button' onclick='blinkLed(" + String(led) + ",this)' style='background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;margin-right:4px' title='Blink to locate'>&#128294;</button>"\
-           "<button type='button' onclick='removeRow(" + String(i) + ")' style='background:#f5a800;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer'>&#10005;</button>"\
-           "</td>"\
+           "<td style='padding:4px'><button type='button' onclick='removeRow(" + String(i) + ")' style='background:#f5a800;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer'>&#10005;</button></td>"
            "</tr>";
 }
