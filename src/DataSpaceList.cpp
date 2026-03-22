@@ -89,7 +89,23 @@ void DataSpaceList::saveList(const std::vector<SpaceSearchList>& list) {
 }
 
 void DataSpaceList::resetToDefault() {
+    // Clear NVS and rebuild _list from the compiled-in default table.
     AppConfig::getInstance().resetSpaceMap();
-    _loaded = false; // Force reload from default on next access.
-    ensureLoaded();
+    _loaded = false;
+    _list.clear();
+    for (int i = 0; i < defaultSearchListSize; i++) {
+        _list.push_back(defaultSearchList[i]);
+    }
+    _loaded = true;
+    // Persist the default list explicitly so NVS is never left empty.
+    uint8_t led[SPACEMAP_MAX_ENTRIES];
+    String  name[SPACEMAP_MAX_ENTRIES];
+    String  city[SPACEMAP_MAX_ENTRIES];
+    int count = (int)_list.size();
+    for (int i = 0; i < count; i++) {
+        led[i]  = (uint8_t)_list[i].getLED();
+        name[i] = _list[i].getName();
+        city[i] = _list[i].city;
+    }
+    AppConfig::getInstance().saveSpaceMap(led, name, city, count);
 }
