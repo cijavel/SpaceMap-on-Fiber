@@ -51,9 +51,11 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
     Stream& responseStream = http.getStream();
 
     // Filter: pull only the fields we actually need to reduce memory pressure.
+    // The SpaceAPI wraps all space data inside a "data" object:
+    // [ { "url":"...", "valid":true, "data": { "space":"Name", "state":{"open":true} } }, ... ]
     StaticJsonDocument<128> filter;
-    filter["space"]         = true;
-    filter["state"]["open"] = true;
+    filter["data"]["space"]         = true;
+    filter["data"]["state"]["open"] = true;
 
     // One parsed space object at a time – 4 KB is comfortable for a single entry.
     DynamicJsonDocument spaceDoc(4096);
@@ -73,12 +75,12 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
             continue;
         }
 
-        String spaceName = spaceDoc["space"].as<String>();
+        String spaceName = spaceDoc["data"]["space"].as<String>();
         int ledIndex = spaceDirectory.getLEDforName(spaceName);
         if (ledIndex < 0) continue; // Not a space we track.
 
         // The "open" field can be true, false, or absent/null.
-        JsonVariant openField = spaceDoc["state"]["open"];
+        JsonVariant openField = spaceDoc["data"]["state"]["open"];
         SpaceStatus status;
         if (openField.is<bool>()) {
             status = openField.as<bool>() ? SpaceStatus::OPEN : SpaceStatus::CLOSED;
