@@ -44,19 +44,23 @@ void SettingsWebServer::registerRoutes() {
         handleSettingsReset(req);
     });
 
-    _server.on("/spacemap", HTTP_GET, [this](AsyncWebServerRequest* req) {
-        handleSpaceMapGet(req);
-    });
-
-    _server.on("/spacemap", HTTP_POST, [this](AsyncWebServerRequest* req) {
-        handleSpaceMapPost(req);
-    });
+    // Sub-routes must be registered before the parent route, because
+    // ESPAsyncWebServer matches handlers in registration order and
+    // "/spacemap" would otherwise swallow "/spacemap/reset" etc.
     _server.on("/spacemap/reset", HTTP_POST, [this](AsyncWebServerRequest* req) {
         handleSpaceMapReset(req);
     });
 
     _server.on("/spacemap/export", HTTP_GET, [this](AsyncWebServerRequest* req) {
         handleSpaceMapExport(req);
+    });
+
+    _server.on("/spacemap", HTTP_GET, [this](AsyncWebServerRequest* req) {
+        handleSpaceMapGet(req);
+    });
+
+    _server.on("/spacemap", HTTP_POST, [this](AsyncWebServerRequest* req) {
+        handleSpaceMapPost(req);
     });
 
     _server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest* req) {
