@@ -89,15 +89,15 @@ void DataSpaceList::saveList(const std::vector<SpaceSearchList>& list) {
 }
 
 void DataSpaceList::resetToDefault() {
-    // Clear NVS and rebuild _list from the compiled-in default table.
-    AppConfig::getInstance().resetSpaceMap();
-    _loaded = false;
+    // Rebuild _list directly from the compiled-in default table.
     _list.clear();
     for (int i = 0; i < defaultSearchListSize; i++) {
         _list.push_back(defaultSearchList[i]);
     }
     _loaded = true;
-    // Persist the default list explicitly so NVS is never left empty.
+    // Overwrite NVS with the default list in a single open/close cycle.
+    // Do NOT call resetSpaceMap() first — opening NVS twice in quick
+    // succession after a remove() is unreliable on ESP32.
     uint8_t led[SPACEMAP_MAX_ENTRIES];
     String  name[SPACEMAP_MAX_ENTRIES];
     String  city[SPACEMAP_MAX_ENTRIES];
