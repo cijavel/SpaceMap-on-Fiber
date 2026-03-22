@@ -394,18 +394,28 @@ void SettingsWebServer::handleSpaceMapBlink(AsyncWebServerRequest* request) {
     // Antwort sofort senden – kein Blockieren des async_tcp-Tasks.
     request->send(200, "application/json", "{\"ok\":true}");
 
+    // Snapshot der Statusliste zum jetzigen Zeitpunkt kopieren (Bug B Fix):
+    // Der blink_task liest seinen eigenen privaten Snapshot, sodass ein
+    // gleichzeitiger WebClientHandler::getSpaceStatus()-Schreibzugriff auf
+    // spaceStatusList keine Race-Condition auslösen kann.
+    struct BlinkParams {
+        uint8_t ledIndex;
+        std::vector<SpaceStatusList> snapshot;
+    };
+    auto* p = new BlinkParams{(uint8_t)ledIndex, spaceStatusList};
+
     // Blink in separatem FreeRTOS-Task ausführen, damit delay() den
     // Webserver-Task nicht für 3 Sekunden einfriert.
-    struct BlinkParams { uint8_t ledIndex; };
-    auto* p = new BlinkParams{(uint8_t)ledIndex};
+    // Stack auf 4096 erhöht, da der Snapshot-Vektor auf dem Task-Stack liegt.
+    // NeoPixelLED::blinkLED() hält intern _stripMutex für die gesamte Laufzeit,
+    // sodass gleichzeitige updateLEDs()-Aufrufe und doppelte Blink-Klicks
+    // serialisiert werden (Bug A + C Fix).
     xTaskCreate([](void* arg) {
         auto* bp = static_cast<BlinkParams*>(arg);
-        // Übergibt die echte Statusliste → LED wird nach dem Blinken
-        // korrekt in ihre Statusfarbe zurückgesetzt (Bug 1 Fix).
-        NeoPixelLED::getInstance().blinkLED(bp->ledIndex, spaceStatusList);
+        NeoPixelLED::getInstance().blinkLED(bp->ledIndex, bp->snapshot);
         delete bp;
         vTaskDelete(nullptr);
-    }, "blink_task", 2048, p, 1, nullptr);
+    }, "blink_task", 4096, p, 1, nullptr);
 }
 
 // --------------------------------------------------------------------------
