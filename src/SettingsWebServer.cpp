@@ -518,10 +518,29 @@ function doImport(append) {
         markRowDirty(tbody.lastElementChild);
         rowCount++;
     });
+    resolveCollisions();
     sortTableByLed();
     document.getElementById('importArea').value = '';
 }
-    
+
+// ---- Resolve duplicate LED# values across all rows ----
+// Iterates inputs sorted by current value; any duplicate is bumped up by 1
+// repeatedly until it finds a free slot.
+function resolveCollisions() {
+    var inputs = Array.from(document.querySelectorAll('#mapBody input.led-input'));
+    inputs.sort(function(a, b) { return parseInt(a.value, 10) - parseInt(b.value, 10); });
+    var seen = {};
+    inputs.forEach(function(inp) {
+        var v = parseInt(inp.value, 10);
+        while (seen[v] !== undefined) { v++; }
+        if (v !== parseInt(inp.value, 10)) {
+            inp.value = v;
+            markRowDirty(inp.closest('tr'));
+        }
+        seen[v] = true;
+    });
+}
+
 // ---- LED# change handler: resolve collisions then sort ----
 function onLedChanged(inp) {
     markRowDirty(inp.closest('tr'));
