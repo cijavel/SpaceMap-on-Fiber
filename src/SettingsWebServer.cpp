@@ -509,6 +509,9 @@ function doImport(append) {
     if (!append) {
         tbody.innerHTML = '';
         rowCount = 0;
+    } else {
+        // Sync rowCount with actual number of rows before appending
+        rowCount = tbody.querySelectorAll('tr').length;
     }
     parsed.forEach(function(p) {
         tbody.insertAdjacentHTML('beforeend', buildRow(rowCount, p.led, p.name, p.city));

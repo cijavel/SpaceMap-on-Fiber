@@ -47,7 +47,9 @@ void AppConfig::save() {
 // conflicts with the settings _prefs handle.
 // --------------------------------------------------------------------------
 int AppConfig::loadSpaceMap(uint8_t* ledOut, String* nameOut, String* cityOut, int maxEntries) {
-    if (!_smPrefs.begin("smdata", /*readOnly=*/true)) return 0;
+    // Use readOnly=false — on ESP32, begin() with readOnly=true fails if the
+    // namespace has never been written before (e.g. fresh flash or after clear()).
+    if (!_smPrefs.begin("smdata", /*readOnly=*/false)) return 0;
     int count = (int)_smPrefs.getInt("smCount", 0);
     if (count <= 0 || count > maxEntries) { _smPrefs.end(); return 0; }
     for (int i = 0; i < count; i++) {
