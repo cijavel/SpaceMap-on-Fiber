@@ -74,7 +74,8 @@ void SettingsWebServer::registerRoutes() {
 
     _server.on("/api/spacestatus", HTTP_GET, [this](AsyncWebServerRequest* req) {
         // Returns the current SpaceAPI status for every tracked space as a JSON array.
-        // Each entry: {"name":"<space name>","status":"OPEN"|"CLOSED"|"UNKNOWN"}
+        // Each entry: {"name":"<space name>","status":"OPEN"|"CLOSED"|"UNKNOWN","led":<index>}
+        // Returns empty array if no API fetch has completed yet.
         String json = "[";
         for (size_t i = 0; i < spaceStatusList.size(); i++) {
             const auto& e = spaceStatusList[i];
@@ -85,7 +86,9 @@ void SettingsWebServer::registerRoutes() {
                 default:                   statusStr = "UNKNOWN"; break;
             }
             if (i > 0) json += ",";
-            json += "{\"name\":\"" + e.getName() + "\",\"status\":\"" + statusStr + "\"}";
+            json += "{\"name\":\"" + e.getName() +
+                    "\",\"status\":\"" + statusStr +
+                    "\",\"led\":"     + String(e.getLED()) + "}";
         }
         json += "]";
         req->send(200, "application/json", json);
@@ -761,36 +764,63 @@ function blinkLed(btn) {
 }
 
 // Fetch current SpaceAPI status from device and update each row's status span.
-// Matching is done by space name (name input value vs. JSON "name" field).
+// Matching is done by LED index (reliable even if space names differ slightly),
+// with a case-insensitive name fallback.
 function updateSpaceStatus() {
     fetch('/api/spacestatus')
         .then(function(r) { return r.json(); })
         .then(function(list) {
-            // Build a lookup map: name -> status string
-            var statusMap = {};
-            list.forEach(function(e) { statusMap[e.name] = e.status; });
+            if (list.length === 0) {
+                // API has not returned data yet — show a neutral hint on all rows.
+                document.querySelectorAll('#mapBody .space-status').forEach(function(span) {
+                    span.style.color = '#555';
+                    span.innerHTML   = '<span title="No API data yet">&#8212;</span>';
+                });
+                return;
+            }
+
+            // Build two lookup maps: by LED index (primary) and by lower-cased name (fallback).
+            var byLed  = {};
+            var byName = {};
+            list.forEach(function(e) {
+                byLed[e.led]              = e.status;
+                byName[e.name.toLowerCase().trim()] = e.status;
+            });
 
             document.querySelectorAll('#mapBody tr').forEach(function(row) {
+                var ledInput  = row.querySelector('input.led-input');
                 var nameInput = row.querySelectorAll('input')[1]; // index 1 = name field
                 var span      = row.querySelector('.space-status');
-                if (!nameInput || !span) return;
-                var status = statusMap[nameInput.value];
+                if (!ledInput || !nameInput || !span) return;
+
+                var led    = parseInt(ledInput.value, 10);
+                var status = byLed[led] !== undefined
+                             ? byLed[led]
+                             : byName[nameInput.value.toLowerCase().trim()];
+
                 if (status === 'OPEN') {
-                    span.style.color   = '#2dbe60';
-                    span.innerHTML     = '&#9679; OPEN';
+                    span.style.color = '#2dbe60';
+                    span.innerHTML   = '&#9679; OPEN';
                 } else if (status === 'CLOSED') {
-                    span.style.color   = '#e74c3c';
-                    span.innerHTML     = '&#9679; CLOSED';
+                    span.style.color = '#e74c3c';
+                    span.innerHTML   = '&#9679; CLOSED';
                 } else if (status === 'UNKNOWN') {
-                    span.style.color   = '#4a90d9';
-                    span.innerHTML     = '&#9679; UNKNOWN';
+                    span.style.color = '#4a90d9';
+                    span.innerHTML   = '&#9679; UNKNOWN';
                 } else {
-                    span.style.color   = '#555';
-                    span.innerHTML     = '&#8212;';
+                    // LED index not in status list — space not matched by API
+                    span.style.color = '#555';
+                    span.innerHTML   = '&#8212;';
                 }
             });
         })
-        .catch(function() { /* silently ignore if device unreachable */ });
+        .catch(function(err) {
+            document.querySelectorAll('#mapBody .space-status').forEach(function(span) {
+                span.style.color = '#e74c3c';
+                span.innerHTML   = '&#9888;';
+                span.title       = 'Status fetch failed';
+            });
+        });
 }
 
 // Fetch space status once on page load.
