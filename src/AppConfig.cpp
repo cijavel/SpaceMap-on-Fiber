@@ -43,54 +43,37 @@ void AppConfig::save() {
 }
 
 // --------------------------------------------------------------------------
-// SpaceMap persistence
+// SpaceMap persistence — uses a dedicated _smPrefs handle so it never
+// conflicts with the settings _prefs handle.
 // --------------------------------------------------------------------------
 int AppConfig::loadSpaceMap(uint8_t* ledOut, String* nameOut, String* cityOut, int maxEntries) {
-    if (!_prefs.begin(NVS_NAMESPACE, /*readOnly=*/true)) return 0;
-    int count = (int)_prefs.getInt("smCount", 0);
-    if (count <= 0 || count > maxEntries) { _prefs.end(); return 0; }
+    if (!_smPrefs.begin("smdata", /*readOnly=*/true)) return 0;
+    int count = (int)_smPrefs.getInt("smCount", 0);
+    if (count <= 0 || count > maxEntries) { _smPrefs.end(); return 0; }
     for (int i = 0; i < count; i++) {
-        ledOut[i]  = (uint8_t)_prefs.getInt(("smL" + String(i)).c_str(), 0);
-        nameOut[i] = _prefs.getString(("smN" + String(i)).c_str(), "");
-        cityOut[i] = _prefs.getString(("smC" + String(i)).c_str(), "");
+        ledOut[i]  = (uint8_t)_smPrefs.getInt(("smL" + String(i)).c_str(), 0);
+        nameOut[i] = _smPrefs.getString(("smN" + String(i)).c_str(), "");
+        cityOut[i] = _smPrefs.getString(("smC" + String(i)).c_str(), "");
     }
-    _prefs.end();
+    _smPrefs.end();
     return count;
 }
 
 void AppConfig::saveSpaceMap(const uint8_t* led, const String* name, const String* city, int count) {
-    // Always call end() first in case the handle is still open from a previous call.
-    _prefs.end();
-    // Retry up to 3 times — ESP32 NVS can transiently fail to open after
-    // a previous write cycle (e.g. right after resetSpaceMap).
-    bool opened = false;
-    for (int attempt = 0; attempt < 3 && !opened; attempt++) {
-        opened = _prefs.begin(NVS_NAMESPACE, /*readOnly=*/false);
-        if (!opened) delay(10);
-    }
-    if (!opened) return;
-    _prefs.putInt("smCount", count);
+    if (!_smPrefs.begin("smdata", /*readOnly=*/false)) return;
+    _smPrefs.putInt("smCount", count);
     for (int i = 0; i < count; i++) {
-        _prefs.putInt(("smL" + String(i)).c_str(), led[i]);
-        _prefs.putString(("smN" + String(i)).c_str(), name[i]);
-        _prefs.putString(("smC" + String(i)).c_str(), city[i]);
+        _smPrefs.putInt(("smL" + String(i)).c_str(), led[i]);
+        _smPrefs.putString(("smN" + String(i)).c_str(), name[i]);
+        _smPrefs.putString(("smC" + String(i)).c_str(), city[i]);
     }
-    _prefs.end();
+    _smPrefs.end();
 }
 
 void AppConfig::resetSpaceMap() {
-    if (!_prefs.begin(NVS_NAMESPACE, /*readOnly=*/false)) return;
-    // Read the stored count first so we can clean up all individual entry keys.
-    // Use SPACEMAP_MAX_ENTRIES as upper bound in case smCount itself is corrupt.
-    int count = (int)_prefs.getInt("smCount", 0);
-    if (count <= 0 || count > SPACEMAP_MAX_ENTRIES) count = SPACEMAP_MAX_ENTRIES;
-    for (int i = 0; i < count; i++) {
-        _prefs.remove(("smL" + String(i)).c_str());
-        _prefs.remove(("smN" + String(i)).c_str());
-        _prefs.remove(("smC" + String(i)).c_str());
-    }
-    _prefs.remove("smCount");
-    _prefs.end();
+    if (!_smPrefs.begin("smdata", /*readOnly=*/false)) return;
+    _smPrefs.clear();
+    _smPrefs.end();
 }
 
 void AppConfig::resetToDefaults() {

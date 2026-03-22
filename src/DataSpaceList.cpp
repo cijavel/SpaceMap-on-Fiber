@@ -39,13 +39,25 @@ void DataSpaceList::ensureLoaded() {
         for (int i = 0; i < count; i++) {
             _list.emplace_back(led[i], name[i], city[i]);
         }
+        _loaded = true;
     } else {
+        // Nothing in NVS — load compiled-in defaults and persist them
+        // immediately so they survive reboot and the Reset button works.
         _list.clear();
         for (int i = 0; i < defaultSearchListSize; i++) {
             _list.push_back(defaultSearchList[i]);
         }
+        _loaded = true;
+        uint8_t dLed[SPACEMAP_MAX_ENTRIES];
+        String  dName[SPACEMAP_MAX_ENTRIES];
+        String  dCity[SPACEMAP_MAX_ENTRIES];
+        for (int i = 0; i < defaultSearchListSize; i++) {
+            dLed[i]  = (uint8_t)_list[i].getLED();
+            dName[i] = _list[i].getName();
+            dCity[i] = _list[i].city;
+        }
+        AppConfig::getInstance().saveSpaceMap(dLed, dName, dCity, defaultSearchListSize);
     }
-    _loaded = true;
 }
 
 // --------------------------------------------------------------------------

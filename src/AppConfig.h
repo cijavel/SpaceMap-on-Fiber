@@ -58,7 +58,8 @@ private:
     AppConfig(const AppConfig&) = delete;
     void operator=(const AppConfig&) = delete;
 
-    Preferences _prefs;
+    Preferences _prefs;       // Settings (wifiInterval, apiUrl, …)
+    Preferences _smPrefs;     // SpaceMap entries — separate handle to avoid open/close conflicts
 
     unsigned long _intervalWifiCheck = interval_in_Seconds_WiFiCheck;
     unsigned long _intervalLEDs      = interval_in_Seconds_LEDs;
