@@ -50,15 +50,24 @@ static const char SPACEMAP_JS[] PROGMEM = R"rawjs(
 <script>
 var rowCount = 0; // set dynamically before this script runs
 
-function buildRow(i, led, name, city) {
-    return '<tr id="row_'+i+'" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragend="onDragEnd(event)" style="cursor:grab">'
+function buildRow(i, name, city) {
+    var isEmpty = (name === '' && city === '');
+    var rowStyle = isEmpty ? 'opacity:0.45' : '';
+    return '<tr id="row_'+i+'" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragend="onDragEnd(event)" style="cursor:grab;'+rowStyle+'">'
         + '<td style="padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
         + '<td style="padding:4px;text-align:center;white-space:nowrap"><button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="Blink to locate">&#128294;</button><span class="space-status" style="display:inline-block;min-width:80px;margin-left:6px;font-size:0.82em;vertical-align:middle;color:#888">&#8212;</span></td>'
-        + '<td style="padding:4px"><input type="number" name="led_'+i+'" value="'+led+'" min="0" max="255" style="width:60px;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px;-moz-appearance:textfield" class="led-input" onchange="onLedChanged(this)"></td>'
-        + '<td style="padding:4px"><input type="text"   name="name_'+i+'" value="'+name+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="markRowDirty(this.closest(\'tr\'))"></td>'
-        + '<td style="padding:4px"><input type="text"   name="city_'+i+'" value="'+city+'" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="markRowDirty(this.closest(\'tr\'))"></td>'
-        + '<td style="padding:4px"><button type="button" onclick="removeRow('+i+')" style="background:#f5a800;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer">&#10005;</button></td>'
+        + '<td style="padding:4px;text-align:center;color:#555;font-size:0.9em;min-width:36px"><input type="hidden" name="led_'+i+'" value="'+i+'">'+i+'</td>'
+        + '<td style="padding:4px"><input type="text" name="name_'+i+'" value="'+name+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
+        + '<td style="padding:4px"><input type="text" name="city_'+i+'" value="'+city+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
         + '</tr>';
+}
+
+function onNameOrCityInput(inp) {
+    var row = inp.closest('tr');
+    markRowDirty(row);
+    var inputs = row.querySelectorAll('input[type=text]');
+    var empty = inputs[0].value === '' && inputs[1].value === '';
+    row.style.opacity = empty ? '0.45' : '';
 }
 
 function markRowDirty(row) {
@@ -68,100 +77,56 @@ function markRowDirty(row) {
     if (msg) msg.style.display = 'none';
 }
 
-function addRow() {
-    document.getElementById('mapBody').insertAdjacentHTML('beforeend', buildRow(rowCount, rowCount, '', ''));
-    markRowDirty(document.getElementById('mapBody').lastElementChild);
-    rowCount++;
-}
-
-function removeRow(i) {
-    var row = document.getElementById('row_'+i);
-    if (row) row.remove();
-    reindexRows();
-    document.getElementById('mapBody').querySelectorAll('tr').forEach(function(r, idx) {
-        var ledInp = r.querySelector('input.led-input');
-        if (ledInp) ledInp.value = idx;
-        markRowDirty(r);
-    });
-}
-
-function doImport(append) {
+function doImport() {
     var raw = document.getElementById('importArea').value;
-    var parsed = [];
-    var re = /\{\s*(\d+)\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\}/g;
+    // With position: { 2, "Name", "City"}
+    var rePos = /\{\s*(\d+)\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\}/g;
+    // Without position: { "Name", "City"}
+    var reNoPos = /\{\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\}/g;
     var m;
-    while ((m = re.exec(raw)) !== null) {
-        parsed.push({ led: parseInt(m[1], 10), name: m[2], city: m[3] });
+    var withPos = {};
+    while ((m = rePos.exec(raw)) !== null) {
+        withPos[parseInt(m[1], 10)] = { pos: parseInt(m[1], 10), name: m[2], city: m[3] };
     }
-    if (parsed.length === 0) { alert('Could not parse any entries.\nExpected format:\n{ 0, "Name", "City"}, { 1, "Name", "City"}'); return; }
-    parsed.sort(function(a, b) { return a.led - b.led; });
-    var tbody = document.getElementById('mapBody');
-    if (!append) {
-        tbody.innerHTML = '';
-        rowCount = 0;
-    } else {
-        rowCount = tbody.querySelectorAll('tr').length;
+    var stripped = raw.replace(/\{\s*\d+\s*,\s*"[^"]*"\s*,\s*"[^"]*"\s*\}/g, '');
+    var noPos = [];
+    while ((m = reNoPos.exec(stripped)) !== null) {
+        noPos.push({ name: m[1], city: m[2] });
     }
-    parsed.forEach(function(p) {
-        tbody.insertAdjacentHTML('beforeend', buildRow(rowCount, p.led, p.name, p.city));
-        markRowDirty(tbody.lastElementChild);
-        rowCount++;
-    });
-    resolveCollisions();
-    sortTableByLed();
-    document.getElementById('importArea').value = '';
-}
-
-function resolveCollisions() {
-    var inputs = Array.from(document.querySelectorAll('#mapBody input.led-input'));
-    inputs.sort(function(a, b) { return parseInt(a.value, 10) - parseInt(b.value, 10); });
-    var seen = {};
-    inputs.forEach(function(inp) {
-        var v = parseInt(inp.value, 10);
-        while (seen[v] !== undefined) { v++; }
-        if (v !== parseInt(inp.value, 10)) {
-            inp.value = v;
-            markRowDirty(inp.closest('tr'));
-        }
-        seen[v] = true;
-    });
-}
-
-function onLedChanged(inp) {
-    markRowDirty(inp.closest('tr'));
-    var newVal = parseInt(inp.value, 10);
-    if (isNaN(newVal) || newVal < 0) { inp.value = 0; newVal = 0; }
-    if (newVal > 255) { inp.value = 255; newVal = 255; }
-    var inputs = Array.from(document.querySelectorAll('#mapBody input.led-input'));
-    var changed = true;
-    while (changed) {
-        changed = false;
-        var seen = {};
-        inputs.forEach(function(other) {
-            var v = parseInt(other.value, 10);
-            if (other === inp) return;
-            if (seen[v] !== undefined) { other.value = v + 1; changed = true; }
-            seen[v] = other;
-        });
-        inputs.forEach(function(other) {
-            if (other === inp) return;
-            if (parseInt(other.value, 10) === newVal) { other.value = parseInt(other.value, 10) + 1; changed = true; }
-        });
-        inputs = Array.from(document.querySelectorAll('#mapBody input.led-input'));
+    if (Object.keys(withPos).length === 0 && noPos.length === 0) {
+        alert('Keine Eintr\u00e4ge gefunden.\nErwartetes Format:\n{ 2, "MuCCC", "Munich"}\noder: { "MuCCC", "Munich"}');
+        return;
     }
-    sortTableByLed();
-    reindexRows();
-}
-
-function sortTableByLed() {
     var tbody = document.getElementById('mapBody');
     var rows = Array.from(tbody.querySelectorAll('tr'));
-    rows.sort(function(a, b) {
-        return parseInt(a.querySelector('input.led-input').value, 10)
-             - parseInt(b.querySelector('input.led-input').value, 10);
+    Object.values(withPos).forEach(function(p) {
+        if (p.pos >= 0 && p.pos < rows.length) {
+            var row = rows[p.pos];
+            var inputs = row.querySelectorAll('input[type=text]');
+            if (inputs.length >= 2) {
+                inputs[0].value = p.name;
+                inputs[1].value = p.city;
+                row.style.opacity = (p.name === '' && p.city === '') ? '0.45' : '';
+                markRowDirty(row);
+            }
+        }
     });
-    rows.forEach(function(r) { tbody.appendChild(r); });
-    reindexRows();
+    var freeIdx = 0;
+    noPos.forEach(function(p) {
+        while (freeIdx < rows.length) {
+            var row = rows[freeIdx];
+            var inputs = row.querySelectorAll('input[type=text]');
+            freeIdx++;
+            if (inputs.length >= 2 && inputs[0].value === '') {
+                inputs[0].value = p.name;
+                inputs[1].value = p.city;
+                row.style.opacity = '';
+                markRowDirty(row);
+                break;
+            }
+        }
+    });
+    document.getElementById('importArea').value = '';
 }
 
 var dragSrc = null;
@@ -188,16 +153,27 @@ function onDrop(e) {
         var toIdx   = rows.indexOf(target);
         if (fromIdx < toIdx) tbody.insertBefore(dragSrc, target.nextSibling);
         else                 tbody.insertBefore(dragSrc, target);
+        // After drag: re-assign LED indices based on new row order (positions are fixed)
         Array.from(tbody.querySelectorAll('tr')).forEach(function(r, idx) {
-            var ledInp = r.querySelector('input.led-input');
-            if (ledInp) ledInp.value = idx;
+            // Update the hidden led input and the display label
+            var ledHidden = r.querySelector('input[type=hidden]');
+            var ledDisplay = r.querySelector('td:nth-child(3)');
+            if (ledHidden) ledHidden.value = idx;
+            if (ledDisplay) {
+                // Update text node (last child is the text)
+                var tn = ledDisplay.lastChild;
+                if (tn && tn.nodeType === 3) tn.nodeValue = idx;
+            }
             markRowDirty(r);
         });
         reindexRows();
     }
 }
 function onDragEnd(e) {
-    e.currentTarget.style.opacity = '';
+    var row = e.currentTarget;
+    var inputs = row.querySelectorAll('input[type=text]');
+    var isEmpty = inputs.length >= 2 && inputs[0].value === '' && inputs[1].value === '';
+    row.style.opacity = isEmpty ? '0.45' : '';
     document.querySelectorAll('#mapBody tr').forEach(function(r) { r.style.borderTop = ''; });
 }
 
@@ -205,10 +181,12 @@ function doExport() {
     var rows = document.getElementById('mapBody').querySelectorAll('tr');
     var parts = [];
     rows.forEach(function(r) {
-        var led  = r.querySelector('input.led-input').value;
-        var name = r.querySelectorAll('input')[1].value;
-        var city = r.querySelectorAll('input')[2].value;
-        if (name.length > 0) parts.push('{ ' + led + ', "' + name + '", "' + city + '"}');
+        var ledHidden = r.querySelector('input[type=hidden]');
+        var textInputs = r.querySelectorAll('input[type=text]');
+        var led  = ledHidden ? ledHidden.value : '0';
+        var name = textInputs.length > 0 ? textInputs[0].value : '';
+        var city = textInputs.length > 1 ? textInputs[1].value : '';
+        parts.push('{ ' + led + ', "' + name + '", "' + city + '"}');
     });
     var blob = new Blob([parts.join(', ') + '\n'], { type: 'text/plain' });
     var a = document.createElement('a');
@@ -221,7 +199,8 @@ function doExport() {
 }
 
 function blinkLed(btn) {
-    var ledIndex = parseInt(btn.closest('tr').querySelector('input.led-input').value, 10);
+    var ledHidden = btn.closest('tr').querySelector('input[type=hidden]');
+    var ledIndex = ledHidden ? parseInt(ledHidden.value, 10) : 0;
     var orig = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '&#8987;';
@@ -261,12 +240,13 @@ function updateSpaceStatus() {
             byName[e.name.toLowerCase().trim()] = e.status;
         });
         document.querySelectorAll('#mapBody tr').forEach(function(row) {
-            var ledInput  = row.querySelector('input.led-input');
-            var nameInput = row.querySelectorAll('input')[1];
+            var ledHidden = row.querySelector('input[type=hidden]');
+            var textInputs = row.querySelectorAll('input[type=text]');
             var span      = row.querySelector('.space-status');
-            if (!ledInput || !nameInput || !span) return;
-            var led    = parseInt(ledInput.value, 10);
-            var name   = nameInput.value.toLowerCase().trim();
+            if (!ledHidden || !span) return;
+            var led    = parseInt(ledHidden.value, 10);
+            var nameInput = textInputs.length > 0 ? textInputs[0] : null;
+            var name   = nameInput ? nameInput.value.toLowerCase().trim() : '';
             var status = (byLed[led] !== undefined) ? byLed[led] : byName[name];
             if (unmatchedSet[name]) {
                 row.style.background = '#2a1a00'; row.style.outline = '1px solid #f5a800';
@@ -296,11 +276,19 @@ function reindexRows() {
     rowCount = 0;
     rows.forEach(function(r) {
         r.id = 'row_' + rowCount;
-        var inputs = r.querySelectorAll('input');
-        var types = ['led_', 'name_', 'city_'];
-        inputs.forEach(function(inp, j) { inp.name = types[j] + rowCount; });
-        var btns = r.querySelectorAll('button');
-        if (btns.length >= 2) btns[1].setAttribute('onclick', 'removeRow(' + rowCount + ')');
+        // Update hidden LED input name + value
+        var ledHidden = r.querySelector('input[type=hidden]');
+        if (ledHidden) { ledHidden.name = 'led_' + rowCount; ledHidden.value = rowCount; }
+        // Update LED display label (text node inside 3rd td)
+        var ledTd = r.querySelector('td:nth-child(3)');
+        if (ledTd) {
+            var tn = ledTd.lastChild;
+            if (tn && tn.nodeType === 3) tn.nodeValue = rowCount;
+        }
+        // Update text input names
+        var textInputs = r.querySelectorAll('input[type=text]');
+        if (textInputs.length > 0) textInputs[0].name = 'name_' + rowCount;
+        if (textInputs.length > 1) textInputs[1].name = 'city_' + rowCount;
         rowCount++;
     });
 }
@@ -713,29 +701,36 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
 
     s->print(htmlHeader("SpaceMap"));
     s->print(navBar());
-    s->print("<h1>LED &#8596; Hackerspace Mapping</h1>");
+    s->print("<h1>Hackerspace Mapping</h1>");
 
     // --- Editor table ---
     s->print("<h2>Active Mapping</h2>"
-             "<style>input.led-input::-webkit-outer-spin-button,"
-             "input.led-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}</style>"
              "<form method='POST' action='/spacemap' id='mapForm'>"
              "<table id='mapTable' style='width:100%;border-collapse:collapse;margin-top:8px'>"
              "<thead><tr>"
              "<th style='padding:6px;border-bottom:1px solid #3a3a3a;width:24px'></th>"
              "<th style='padding:6px;border-bottom:1px solid #3a3a3a;width:36px'></th>"
-             "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a'>LED#</th>"
+             "<th style='text-align:center;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a;width:40px'>LED#</th>"
              "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a'>Space Name</th>"
              "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a'>City</th>"
-             "<th style='padding:6px;border-bottom:1px solid #3a3a3a'></th>"
              "</tr></thead>"
              "<tbody id='mapBody'>");
 
-    // One row per entry — streamed individually, no big string accumulation.
-    for (int i = 0; i < (int)list.size(); i++) {
-        // Build row directly into stream.
+    // Render exactly LED_COUNT rows — empty entries are rendered with dimmed opacity.
+    for (int i = 0; i < LED_COUNT; i++) {
+        // Find matching entry (list may be shorter or have gaps)
+        String entryName = "";
+        String entryCity = "";
+        for (int j = 0; j < (int)list.size(); j++) {
+            if (list[j].getLED() == i) { entryName = list[j].getName(); entryCity = list[j].city; break; }
+        }
+        bool isEmpty = entryName.length() == 0 && entryCity.length() == 0;
+
         s->print("<tr id='row_"); s->print(i);
-        s->print("' draggable='true' ondragstart='onDragStart(event)' ondragover='onDragOver(event)' ondrop='onDrop(event)' ondragend='onDragEnd(event)' style='cursor:grab'>");
+        s->print("' draggable='true' ondragstart='onDragStart(event)' ondragover='onDragOver(event)' ondrop='onDrop(event)' ondragend='onDragEnd(event)'");
+        s->print(" style='cursor:grab;");
+        if (isEmpty) s->print("opacity:0.45;");
+        s->print("'>");
         // drag handle
         s->print("<td style='padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab' title='Drag to reorder'>&#8597;</td>");
         // blink + status
@@ -745,34 +740,28 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
                  "title='Blink to locate'>&#128294;</button>"
                  "<span class='space-status' style='display:inline-block;min-width:80px;margin-left:6px;"
                  "font-size:0.82em;vertical-align:middle;color:#888'>&#8212;</span></td>");
-        // LED# input
-        s->print("<td style='padding:4px'><input type='number' name='led_"); s->print(i);
-        s->print("' value='"); s->print(list[i].getLED());
-        s->print("' min='0' max='255' style='width:60px;background:#1e1e1e;color:#eee;"
-                 "border:1px solid #3a3a3a;border-radius:4px;padding:4px;-moz-appearance:textfield' "
-                 "class='led-input' onchange='onLedChanged(this)'></td>");
+        // LED# — hidden input + visible label
+        s->print("<td style='padding:4px;text-align:center;color:#555;font-size:0.9em;min-width:40px'>");
+        s->print("<input type='hidden' name='led_"); s->print(i); s->print("' value='"); s->print(i); s->print("'>");
+        s->print(i);
+        s->print("</td>");
         // Name input
         s->print("<td style='padding:4px'><input type='text' name='name_"); s->print(i);
-        s->print("' value='"); s->print(list[i].getName());
-        s->print("' style='width:100%;background:#1e1e1e;color:#eee;"
+        s->print("' value='"); s->print(entryName);
+        s->print("' placeholder='(leer)' style='width:100%;background:#1e1e1e;color:#eee;"
                  "border:1px solid #3a3a3a;border-radius:4px;padding:4px' "
-                 "oninput='markRowDirty(this.closest(\"tr\"))'></td>");
+                 "oninput='onNameOrCityInput(this)'></td>");
         // City input
         s->print("<td style='padding:4px'><input type='text' name='city_"); s->print(i);
-        s->print("' value='"); s->print(list[i].city);
-        s->print("' style='width:100%;background:#1e1e1e;color:#eee;"
+        s->print("' value='"); s->print(entryCity);
+        s->print("' placeholder='(leer)' style='width:100%;background:#1e1e1e;color:#eee;"
                  "border:1px solid #3a3a3a;border-radius:4px;padding:4px' "
-                 "oninput='markRowDirty(this.closest(\"tr\"))'></td>");
-        // Delete button
-        s->print("<td style='padding:4px'><button type='button' onclick='removeRow("); s->print(i);
-        s->print(")' style='background:#f5a800;color:#fff;border:none;border-radius:4px;"
-                 "padding:4px 10px;cursor:pointer'>&#10005;</button></td>");
+                 "oninput='onNameOrCityInput(this)'></td>");
         s->print("</tr>");
     }
 
     s->print("</tbody></table>"
              "<div style='margin-top:12px;display:flex;align-items:center;flex-wrap:wrap;gap:10px'>"
-             "<button type='button' class='btn btn-save' style='background:#1a7a3c;margin:0' onclick='addRow()'>&#43; Add row</button>"
              "<button type='submit' class='btn btn-save' style='margin:0' id='saveBtn'>&#128190; Save</button>");
 
     if (message.length() > 0) {
@@ -791,23 +780,23 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
 
     // --- Import ---
     s->print("<h2>Import</h2>"
-             "<p style='color:#bbb;font-size:0.9em'>Paste your mapping below and click Import. Expected format:</p>"
+             "<p style='color:#bbb;font-size:0.9em'>Eintr&auml;ge einfügen und Import klicken. Erwartetes Format:</p>"
              "<pre style='background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:10px;"
              "font-size:0.8em;color:#888;overflow-x:auto;margin:0 0 10px 0;'>"
-             "{ 0, \"OpenLab Augsburg\", \"Augsburg\"}, { 1, \"IT-Syndikat\", \"Innsbruck\"}, { 2, \"MuCCC\", \"Munich\"}"
+             "{ 2, \"MuCCC\", \"Munich\"}&#10;"
+             "{ \"MuCCC\", \"Munich\"}"
              "</pre>"
-             "<textarea id='importArea' rows='8' style='width:100%;background:#1e1e1e;color:#eee;"
+             "<textarea id='importArea' rows='6' style='width:100%;background:#1e1e1e;color:#eee;"
              "border:1px solid #3a3a3a;border-radius:4px;padding:7px;font-family:monospace;"
              "font-size:0.85em;box-sizing:border-box;'></textarea>"
              "<div style='margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap'>"
-             "<button type='button' class='btn btn-save' style='margin:0' onclick='doImport(false)'>&#8659; Import (ersetzen)</button>"
-             "<button type='button' class='btn btn-save' style='margin:0;background:#2a5a2a' onclick='doImport(true)'>&#43; Import (anh&auml;ngen)</button>"
+             "<button type='button' class='btn btn-save' style='margin:0' onclick='doImport()'>&#8659; Import</button>"
              "</div>");
 
     // --- Export ---
     s->print("<h2>Export</h2>"
-             "<p style='color:#bbb;font-size:0.9em'>Downloads the current mapping as a <code>searchList.cpp</code> snippet "
-             "ready to paste into <code>DataSpaceList.cpp</code>.</p>"
+             "<p style='color:#bbb;font-size:0.9em'>L&auml;dt das aktuelle Mapping als <code>searchList.txt</code> herunter "
+             "(alle Eintr&auml;ge inkl. leerer Positionen).</p>"
              "<button type='button' class='btn btn-save' onclick='doExport()'>&#8659; Export searchList.txt</button>");
 
     // --- Reset ---
@@ -819,7 +808,7 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
 
     // rowCount initialiser + large JS block from PROGMEM.
     s->print("<script>var rowCount = ");
-    s->print((int)list.size());
+    s->print(LED_COUNT);
     s->print(";</script>");
     s->print(FPSTR(SPACEMAP_JS));
 
@@ -840,8 +829,8 @@ void SettingsWebServer::handleSpaceMapGet(AsyncWebServerRequest* request) {
 // --------------------------------------------------------------------------
 void SettingsWebServer::handleSpaceMapPost(AsyncWebServerRequest* request) {
     std::vector<SpaceSearchList> newList;
-    int idx = 0;
-    while (idx < SPACEMAP_MAX_ENTRIES) {
+    // Always iterate exactly LED_COUNT slots — empty entries are stored as empty strings.
+    for (int idx = 0; idx < LED_COUNT; idx++) {
         String ledKey  = "led_"  + String(idx);
         String nameKey = "name_" + String(idx);
         String cityKey = "city_" + String(idx);
@@ -852,11 +841,9 @@ void SettingsWebServer::handleSpaceMapPost(AsyncWebServerRequest* request) {
         String nameStr = request->hasParam(nameKey, true) ? request->getParam(nameKey, true)->value() : "";
         String cityStr = request->hasParam(cityKey, true) ? request->getParam(cityKey, true)->value() : "";
 
-        if (nameStr.length() > 0) {
-            uint8_t ledNum = (uint8_t)constrain(ledStr.toInt(), 0, 255);
-            newList.emplace_back(ledNum, nameStr, cityStr);
-        }
-        idx++;
+        uint8_t ledNum = (uint8_t)constrain(ledStr.toInt(), 0, 255);
+        // Store every slot — empty name means LED will be off (black).
+        newList.emplace_back(ledNum, nameStr, cityStr);
     }
 
     DataSpaceList::getInstance().saveList(newList);
@@ -916,12 +903,21 @@ void SettingsWebServer::handleSpaceMapBlink(AsyncWebServerRequest* request) {
 // --------------------------------------------------------------------------
 void SettingsWebServer::handleSpaceMapExport(AsyncWebServerRequest* request) {
     const auto& list = DataSpaceList::getInstance().getList();
+
+    // Build a lookup by LED index so we can iterate all LED_COUNT slots in order.
+    std::vector<SpaceSearchList const*> byLed(LED_COUNT, nullptr);
+    for (const auto& e : list) {
+        if (e.getLED() < LED_COUNT) byLed[e.getLED()] = &e;
+    }
+
     String out = "";
-    for (int i = 0; i < (int)list.size(); i++) {
-        out += "{ " + String(list[i].getLED()) +
-               ", \"" + list[i].getName() +
-               "\", \"" + list[i].city + "\"}";
-        if (i < (int)list.size() - 1) out += ", ";
+    for (int i = 0; i < LED_COUNT; i++) {
+        if (i > 0) out += ", ";
+        if (byLed[i]) {
+            out += "{ " + String(i) + ", \"" + byLed[i]->getName() + "\", \"" + byLed[i]->city + "\"}";
+        } else {
+            out += "{ " + String(i) + ", \"\", \"\"}";
+        }
     }
     out += "\n";
 
