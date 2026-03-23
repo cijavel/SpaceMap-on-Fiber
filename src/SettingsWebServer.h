@@ -27,7 +27,7 @@ private:
 
     void registerRoutes();
 
-     // Route handlers
+    // Route handlers
     void handleIndex(AsyncWebServerRequest* request);
     void handleSettingsGet(AsyncWebServerRequest* request);
     void handleSettingsPost(AsyncWebServerRequest* request);
@@ -40,11 +40,13 @@ private:
     void handleNotFound(AsyncWebServerRequest* request);
     void handleHttpsRedirect(AsyncWebServerRequest* request);
 
-    // HTML page builders
-    static String buildIndexPage(const String& message = "");
-    static String buildSettingsPage(const String& message = "");
-    static String buildSpaceMapPage(const String& message = "");
-    static String buildSpaceMapRow(int i, int led, const String& name, const String& city);
+    // Streaming page renderers — write directly into an AsyncResponseStream,
+    // never build a monolithic String in heap.
+    static void streamIndexPage(AsyncResponseStream* s, const String& message = "");
+    static void streamSettingsPage(AsyncResponseStream* s, const String& message = "");
+    static void streamSpaceMapPage(AsyncResponseStream* s, const String& message = "");
+
+    // Shared fragment helpers (still return small Strings — all well under 512 B).
     static String htmlHeader(const String& title);
     static String htmlFooter();
     static String navBar();

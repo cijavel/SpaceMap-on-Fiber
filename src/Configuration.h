@@ -26,7 +26,7 @@
 #define webpage_SpaceAPI "https://api.spaceapi.io/"
 
 #define BAUDRATE 9600
-#define DeviceName "SpaceMap on Fiber 2023"
+#define DeviceName "SpaceMap on Fiber 2026"
 
 // LED strip configuration.
 #define LED_BRIGHTNESS 255

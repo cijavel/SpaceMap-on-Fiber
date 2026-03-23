@@ -66,7 +66,9 @@ void DataSpaceList::ensureLoaded() {
 // --------------------------------------------------------------------------
 int DataSpaceList::getLEDforName(String name) {
     ensureLoaded();
+    if (name.length() == 0) return -1;
     for (const auto& entry : _list) {
+        if (entry.getName().length() == 0) continue; // empty slot = black LED, skip
         if (entry.getName() == name) {
             return entry.getLED();
         }
@@ -76,7 +78,11 @@ int DataSpaceList::getLEDforName(String name) {
 
 int DataSpaceList::getNumberofSpacesonwatch() {
     ensureLoaded();
-    return (int)_list.size();
+    int count = 0;
+    for (const auto& entry : _list) {
+        if (entry.getName().length() > 0) count++;
+    }
+    return count;
 }
 
 const std::vector<SpaceSearchList>& DataSpaceList::getList() {
