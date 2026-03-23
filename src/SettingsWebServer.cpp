@@ -819,8 +819,14 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
 // /spacemap  – GET
 // --------------------------------------------------------------------------
 void SettingsWebServer::handleSpaceMapGet(AsyncWebServerRequest* request) {
+    String msg = "";
+    if (request->hasParam("msg")) {
+        String key = request->getParam("msg")->value();
+        if      (key == "saved") msg = "Mapping saved.";
+        else if (key == "reset") msg = "Mapping reset to default.";
+    }
     AsyncResponseStream* s = request->beginResponseStream("text/html");
-    streamSpaceMapPage(s);
+    streamSpaceMapPage(s, msg);
     request->send(s);
 }
 
@@ -851,9 +857,11 @@ void SettingsWebServer::handleSpaceMapPost(AsyncWebServerRequest* request) {
 #ifdef DEBUG
     Serial.println("WEB: SpaceMap saved via web interface");
 #endif
-    AsyncResponseStream* s = request->beginResponseStream("text/html");
-    streamSpaceMapPage(s, "Mapping saved.");
-    request->send(s);
+    // 303 redirect — avoids re-rendering the full page in the POST handler,
+    // which would overflow the async task stack with LED_COUNT entries.
+    AsyncWebServerResponse* resp = request->beginResponse(303);
+    resp->addHeader("Location", "/spacemap?msg=saved");
+    request->send(resp);
 }
 
 // --------------------------------------------------------------------------
@@ -864,9 +872,9 @@ void SettingsWebServer::handleSpaceMapReset(AsyncWebServerRequest* request) {
 #ifdef DEBUG
     Serial.println("WEB: SpaceMap reset to default");
 #endif
-    AsyncResponseStream* s = request->beginResponseStream("text/html");
-    streamSpaceMapPage(s, "Mapping reset to default.");
-    request->send(s);
+    AsyncWebServerResponse* resp = request->beginResponse(303);
+    resp->addHeader("Location", "/spacemap?msg=reset");
+    request->send(resp);
 }
 
 // --------------------------------------------------------------------------

@@ -10,8 +10,9 @@ ARCHITECTURE:
   main.cpp              — Setup/loop, interval scheduling (WiFi watchdog, API poll, LED update)
   AppConfig             — Singleton. Loads/saves runtime settings (intervals, brightness, URL)
                           via ESP32 NVS (Preferences). Compile-time defaults in Configuration.h.
-  DataSpaceList         — Singleton. Holds the LED↔Hackerspace mapping. Lazy-loaded from NVS;
+  DataSpaceList         — Singleton. Holds the Hackerspace mapping. Lazy-loaded from NVS;
                           falls back to built-in default list (DataSpaceList.cpp).
+                          Always LED_COUNT (50) slots; empty entries (name="") render as black LEDs.
                           Max 64 entries (SPACEMAP_MAX_ENTRIES).
   NeoPixelLED           — Singleton. Wraps NeoPixelBus strip. Methods: initLEDs, enumerateLEDs
                           (startup sequence), updateLEDs (apply status colors), blinkLED (locate
@@ -25,11 +26,14 @@ ARCHITECTURE:
                             GET  /settings          — Settings form (intervals, brightness, API URL)
                             POST /settings          — Save settings to NVS
                             POST /settings/reset    — Reset settings to compile-time defaults
-                            GET  /spacemap          — LED↔Space mapping editor (table, drag-sort, import/export)
-                            POST /spacemap          — Save mapping to NVS
+                            GET  /spacemap          — Hackerspace mapping editor. Fixed LED_COUNT rows,
+                                                       LED# read-only label; drag to swap positions;
+                                                       import (replace by position or next free slot);
+                                                       export includes all slots incl. empty ones.
+                            POST /spacemap          — Save all LED_COUNT slots (incl. empty) to NVS
                             POST /spacemap/reset    — Restore built-in default mapping
                             GET  /spacemap/blink    — Blink single LED (param: led=<index>)
-                            GET  /spacemap/export   — Download current mapping as .txt snippet
+                            GET  /spacemap/export   — Download all LED_COUNT slots as .txt (incl. empty)
                             GET  /api/status        — JSON: last HTTP code, URL, age in seconds
                           Port 443 redirects to HTTP.
 
@@ -57,6 +61,6 @@ KNOWN BUGS:
      Blocks async_tcp task; no other HTTP requests served during blink.
 
 CONFIGURATION (Configuration.h):
-  LED_COUNT=30, LED_DATA_PIN=14, LED_BRIGHTNESS=255, ONBOARD_BRIGHTNESS=10
+  LED_COUNT=50, LED_DATA_PIN=14, LED_BRIGHTNESS=255, ONBOARD_BRIGHTNESS=10
   API interval=120s, LED refresh=10s, WiFi check=300s
   Default SpaceAPI URL: https://api.spaceapi.io/
