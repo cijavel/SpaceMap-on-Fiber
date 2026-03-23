@@ -24,11 +24,27 @@ public:
     // Returns the millis() timestamp of the most recent fetch attempt (0 = never).
     static unsigned long getLastAttemptMs() { return _lastAttemptMs; }
 
+    // Parse-result counters from the most recent successful fetch.
+    static int getLastFoundCount()   { return _lastFoundCount; }
+    static int getLastParseErrors()  { return _lastParseErrors; }
+    static int getLastTotalObjects() { return _lastTotalObjects; }
+    static int getLastWatchListSize(){ return _lastWatchListSize; }
+
+    // Names from the watch list that were NOT present in the last API response.
+    // Only populated when HTTP 200 was received; empty if watch list is empty.
+    static const std::vector<String>& getLastUnmatchedNames() { return _lastUnmatchedNames; }
+
 private:
     WebClientHandler() = delete; // Purely static – prevent instantiation.
 
     static int           _lastHttpCode;
     static unsigned long _lastAttemptMs;
+
+    static int  _lastFoundCount;
+    static int  _lastParseErrors;
+    static int  _lastTotalObjects;
+    static int  _lastWatchListSize;
+    static std::vector<String> _lastUnmatchedNames;
 
     // Add a new entry or update the status of an existing one in spaceStatusList.
     static void updateOrInsertStatus(std::vector<SpaceStatusList>& spaceStatusList,

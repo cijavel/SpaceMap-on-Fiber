@@ -31,7 +31,7 @@
 // LED strip configuration.
 #define LED_BRIGHTNESS 255
 #define ONBOARD_BRIGHTNESS 10
-#define LED_COUNT 30
+#define LED_COUNT 50
 #define LED_DATA_PIN 14
 
 // Safety cap on total LED strip current draw in milliamps.

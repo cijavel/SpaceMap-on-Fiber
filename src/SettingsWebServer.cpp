@@ -98,10 +98,26 @@ void SettingsWebServer::registerRoutes() {
         unsigned long age = (WebClientHandler::getLastAttemptMs() == 0)
                             ? 0
                             : (millis() - WebClientHandler::getLastAttemptMs()) / 1000UL;
-        String json = "{\"httpCode\":" + String(code) +
-                      ",\"ok\":" + (code == 200 ? "true" : "false") +
-                      ",\"ageSec\":" + String(age) +
-                      ",\"url\":\"" + AppConfig::getInstance().getSpaceApiUrl() + "\"}";
+
+        // Build unmatched-names JSON array.
+        const auto& unmatched = WebClientHandler::getLastUnmatchedNames();
+        String unmatchedJson = "[";
+        for (size_t i = 0; i < unmatched.size(); i++) {
+            if (i > 0) unmatchedJson += ",";
+            unmatchedJson += "\"" + unmatched[i] + "\"";
+        }
+        unmatchedJson += "]";
+
+        String json = "{\"httpCode\":"    + String(code) +
+                      ",\"ok\":"          + (code == 200 ? "true" : "false") +
+                      ",\"ageSec\":"      + String(age) +
+                      ",\"url\":\""       + AppConfig::getInstance().getSpaceApiUrl() + "\"" +
+                      ",\"foundCount\":"  + String(WebClientHandler::getLastFoundCount()) +
+                      ",\"parseErrors\":" + String(WebClientHandler::getLastParseErrors()) +
+                      ",\"totalObjects\":" + String(WebClientHandler::getLastTotalObjects()) +
+                      ",\"watchListSize\":" + String(WebClientHandler::getLastWatchListSize()) +
+                      ",\"unmatched\":"   + unmatchedJson +
+                      "}";
         req->send(200, "application/json", json);
     });
 
@@ -256,12 +272,15 @@ String SettingsWebServer::buildIndexPage(const String& message) {
             "background:#1a1a1a;border:1px solid #3a3a3a;max-width:480px;'>"
             "<span style='color:#888;font-size:0.9em'>&#8635; Checking API connection&hellip;</span>"
             "</div>";
+    html += "<div id='parseStatus' style='margin-top:10px;padding:14px 18px;border-radius:6px;"
+            "background:#1a1a1a;border:1px solid #3a3a3a;max-width:480px;display:none;'></div>";
     html += R"rawjs(
     <script>
     function checkApi() {
         fetch('/api/status')
             .then(function(r){ return r.json(); })
             .then(function(d) {
+                // --- Existing: HTTP reachability box ---
                 var box = document.getElementById('apiStatus');
                 var age = d.ageSec > 0 ? ' &mdash; last checked ' + d.ageSec + 's ago' : '';
                 if (d.httpCode === 0) {
@@ -282,10 +301,56 @@ String SettingsWebServer::buildIndexPage(const String& message) {
                         + age
                         + '<br><small style="color:#777">HTTP ' + d.httpCode + ' &mdash; ' + d.url + '</small>';
                 }
+
+                // --- New: parse-result box (only meaningful after a successful fetch) ---
+                var pbox = document.getElementById('parseStatus');
+                if (d.httpCode === 0) {
+                    pbox.style.display = 'none';
+                    return;
+                }
+                pbox.style.display = 'block';
+
+                if (!d.ok) {
+                    // HTTP error – parse never ran
+                    pbox.style.borderColor = '#555';
+                    pbox.innerHTML = '<span style="color:#777;font-size:0.9em">&#8212; Parse status not available (HTTP error)</span>';
+                    return;
+                }
+
+                if (d.watchListSize === 0) {
+                    pbox.style.borderColor = '#555';
+                    pbox.innerHTML = '<span style="font-size:1.1em">&#9711;</span>'
+                        + ' <strong style="color:#aaa">Watch list is empty &mdash; no matching needed</strong>';
+                    return;
+                }
+
+                if (d.parseErrors > 0) {
+                    pbox.style.borderColor = '#f5a800';
+                    pbox.innerHTML = '<span style="font-size:1.1em">&#9888;</span>'
+                        + ' <strong style="color:#f5a800">Parse errors detected &mdash; API structure may have changed</strong>'
+                        + '<br><small style="color:#aaa">'
+                        + d.parseErrors + ' error(s) out of ' + d.totalObjects + ' objects &mdash; '
+                        + d.foundCount + ' of ' + d.watchListSize + ' spaces matched</small>';
+                    return;
+                }
+
+                var notFound = d.unmatched ? d.unmatched.length : 0;
+                if (notFound === 0) {
+                    pbox.style.borderColor = '#1a7a3c';
+                    pbox.innerHTML = '<span style="font-size:1.1em">&#10003;</span>'
+                        + ' <strong style="color:#2dbe60">All ' + d.foundCount + ' of ' + d.watchListSize + ' spaces found in API</strong>';
+                } else {
+                    pbox.style.borderColor = '#f5a800';
+                    pbox.innerHTML = '<span style="font-size:1.1em">&#9888;</span>'
+                        + ' <strong style="color:#f5a800">' + d.foundCount + ' of ' + d.watchListSize + ' spaces found &mdash; '
+                        + notFound + ' not in API response</strong>'
+                        + '<br><small style="color:#aaa">Not found: ' + d.unmatched.join(', ') + '</small>';
+                }
             })
             .catch(function() {
                 document.getElementById('apiStatus').innerHTML =
                     '<span style="color:#e74c3c">&#9888; Could not reach device</span>';
+                document.getElementById('parseStatus').style.display = 'none';
             });
     }
     checkApi();
@@ -763,64 +828,95 @@ function blinkLed(btn) {
 }
 
 // Fetch current SpaceAPI status from device and update each row's status span.
+// Also fetches /api/status to highlight watch-list entries not found in the API.
 // Primary match: LED index (integer, unambiguous).
 // Fallback match: trimmed lower-case name (catches minor whitespace differences).
 function updateSpaceStatus() {
-    fetch('/api/spacestatus')
-        .then(function(r) { return r.json(); })
-        .then(function(list) {
-            if (list.length === 0) {
-                // API has not returned data yet – leave dashes, add tooltip.
-                document.querySelectorAll('#mapBody .space-status').forEach(function(s) {
-                    s.style.color = '#555';
-                    s.title       = 'No API data yet – wait for first poll';
-                    s.innerHTML   = '&#8212;';
-                });
-                return;
+    Promise.all([
+        fetch('/api/spacestatus').then(function(r) { return r.json(); }),
+        fetch('/api/status').then(function(r) { return r.json(); })
+    ])
+    .then(function(results) {
+        var list       = results[0];
+        var apiStatus  = results[1];
+
+        // Build set of names not found in the last API response.
+        // Only apply "not found" highlighting when the last HTTP call succeeded
+        // and there were no parse errors (otherwise the absence is not meaningful).
+        var unmatchedSet = {};
+        if (apiStatus.ok && apiStatus.parseErrors === 0 && apiStatus.unmatched) {
+            apiStatus.unmatched.forEach(function(n) {
+                unmatchedSet[n.toLowerCase().trim()] = true;
+            });
+        }
+
+        if (list.length === 0) {
+            // API has not returned data yet – leave dashes, add tooltip.
+            document.querySelectorAll('#mapBody .space-status').forEach(function(s) {
+                s.style.color = '#555';
+                s.title       = 'No API data yet – wait for first poll';
+                s.innerHTML   = '&#8212;';
+            });
+            // Still apply unmatched highlighting even without live status data.
+        }
+
+        // Build lookup maps from spacestatus.
+        var byLed  = {};
+        var byName = {};
+        list.forEach(function(e) {
+            byLed[e.led]                        = e.status;
+            byName[e.name.toLowerCase().trim()] = e.status;
+        });
+
+        document.querySelectorAll('#mapBody tr').forEach(function(row) {
+            var ledInput  = row.querySelector('input.led-input');
+            var nameInput = row.querySelectorAll('input')[1];
+            var span      = row.querySelector('.space-status');
+            if (!ledInput || !nameInput || !span) return;
+
+            var led    = parseInt(ledInput.value, 10);
+            var name   = nameInput.value.toLowerCase().trim();
+            var status = (byLed[led] !== undefined) ? byLed[led] : byName[name];
+
+            // --- Unmatched row highlight ---
+            if (unmatchedSet[name]) {
+                row.style.background = '#2a1a00';
+                row.style.outline    = '1px solid #f5a800';
+                span.style.color     = '#f5a800';
+                span.title           = 'Not found in last API response – space may have been renamed or removed';
+                span.innerHTML       = '&#9888; N/A';
+                return; // Skip normal status display for this row.
+            } else {
+                // Clear any previous unmatched highlight.
+                if (row.style.background === 'rgb(42, 26, 0)') {
+                    row.style.background = '';
+                    row.style.outline    = '';
+                }
             }
 
-            // Build lookup maps.
-            var byLed  = {};
-            var byName = {};
-            list.forEach(function(e) {
-                byLed[e.led]                           = e.status;
-                byName[e.name.toLowerCase().trim()]    = e.status;
-            });
-
-            document.querySelectorAll('#mapBody tr').forEach(function(row) {
-                var ledInput  = row.querySelector('input.led-input');
-                var nameInput = row.querySelectorAll('input')[1];
-                var span      = row.querySelector('.space-status');
-                if (!ledInput || !nameInput || !span) return;
-
-                var led    = parseInt(ledInput.value, 10);
-                var status = (byLed[led] !== undefined)
-                             ? byLed[led]
-                             : byName[nameInput.value.toLowerCase().trim()];
-
-                span.title = '';
-                if (status === 'OPEN') {
-                    span.style.color = '#2dbe60';
-                    span.innerHTML   = '&#9679; OPEN';
-                } else if (status === 'CLOSED') {
-                    span.style.color = '#e74c3c';
-                    span.innerHTML   = '&#9679; CLOSED';
-                } else if (status === 'UNKNOWN') {
-                    span.style.color = '#4a90d9';
-                    span.innerHTML   = '&#9679; UNKNOWN';
-                } else {
-                    span.style.color = '#555';
-                    span.innerHTML   = '&#8212;';
-                }
-            });
-        })
-        .catch(function() {
-            document.querySelectorAll('#mapBody .space-status').forEach(function(s) {
-                s.style.color = '#e74c3c';
-                s.title       = 'Status fetch failed';
-                s.innerHTML   = '&#9888;';
-            });
+            span.title = '';
+            if (status === 'OPEN') {
+                span.style.color = '#2dbe60';
+                span.innerHTML   = '&#9679; OPEN';
+            } else if (status === 'CLOSED') {
+                span.style.color = '#e74c3c';
+                span.innerHTML   = '&#9679; CLOSED';
+            } else if (status === 'UNKNOWN') {
+                span.style.color = '#4a90d9';
+                span.innerHTML   = '&#9679; UNKNOWN';
+            } else {
+                span.style.color = '#555';
+                span.innerHTML   = '&#8212;';
+            }
         });
+    })
+    .catch(function() {
+        document.querySelectorAll('#mapBody .space-status').forEach(function(s) {
+            s.style.color = '#e74c3c';
+            s.title       = 'Status fetch failed';
+            s.innerHTML   = '&#9888;';
+        });
+    });
 }
 
 // Fetch space status once on page load.

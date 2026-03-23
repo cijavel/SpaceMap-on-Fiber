@@ -3,6 +3,12 @@
 int           WebClientHandler::_lastHttpCode  = 0;
 unsigned long WebClientHandler::_lastAttemptMs = 0;
 
+int  WebClientHandler::_lastFoundCount    = 0;
+int  WebClientHandler::_lastParseErrors   = 0;
+int  WebClientHandler::_lastTotalObjects  = 0;
+int  WebClientHandler::_lastWatchListSize = 0;
+std::vector<String> WebClientHandler::_lastUnmatchedNames;
+
 // --------------------------------------------------------------------------
 // Add a new hackerspace entry or update the status of an existing one.
 // The timestamp is only refreshed when the status actually changes.
@@ -28,7 +34,18 @@ void WebClientHandler::updateOrInsertStatus(std::vector<SpaceStatusList>& spaceS
 // --------------------------------------------------------------------------
 void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusList,
                                       const String& spaceApiUrl) {
+    // Reset parse counters for this run.
+    _lastFoundCount    = 0;
+    _lastParseErrors   = 0;
+    _lastTotalObjects  = 0;
+    _lastUnmatchedNames.clear();
+
     DataSpaceList& spaceDirectory = DataSpaceList::getInstance();
+
+    // Snapshot watch list for unmatched-name tracking.
+    const auto& watchList = spaceDirectory.getList();
+    _lastWatchListSize = (int)watchList.size();
+    std::vector<bool> matchedFlags(watchList.size(), false);
 
     HTTPClient http;
     WiFiClientSecure client;
@@ -70,14 +87,22 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
         DeserializationError parseError = deserializeJson(spaceDoc, responseStream,
                                                           DeserializationOption::Filter(filter));
         if (parseError) {
+            _lastParseErrors++;
             Serial.print(F("deserializeJson() failed: "));
             Serial.println(parseError.c_str());
             continue;
         }
 
+        _lastTotalObjects++;
         String spaceName = spaceDoc["data"]["space"].as<String>();
         int ledIndex = spaceDirectory.getLEDforName(spaceName);
         if (ledIndex < 0) continue; // Not a space we track.
+
+        // Mark this watch-list entry as matched.
+        for (size_t wi = 0; wi < watchList.size(); wi++) {
+            if (watchList[wi].getName() == spaceName) { matchedFlags[wi] = true; break; }
+        }
+        _lastFoundCount++;
 
         // The "open" field can be true, false, or absent/null.
         JsonVariant openField = spaceDoc["data"]["state"]["open"];
@@ -93,4 +118,11 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
     } while (responseStream.findUntil(",", "]"));
 
     http.end();
+
+    // Collect watch-list entries that never appeared in the API response.
+    for (size_t wi = 0; wi < watchList.size(); wi++) {
+        if (!matchedFlags[wi]) {
+            _lastUnmatchedNames.push_back(watchList[wi].getName());
+        }
+    }
 }
