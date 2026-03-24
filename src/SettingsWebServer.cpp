@@ -271,6 +271,7 @@ function updateSpaceStatus() {
 }
 
 updateSpaceStatus();
+setInterval(updateSpaceStatus, 15000);
 
 function reindexRows() {
     var rows = document.getElementById('mapBody').querySelectorAll('tr');
