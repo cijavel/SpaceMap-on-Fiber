@@ -46,28 +46,30 @@ void AppConfig::save() {
 // SpaceMap persistence — uses a dedicated _smPrefs handle so it never
 // conflicts with the settings _prefs handle.
 // --------------------------------------------------------------------------
-int AppConfig::loadSpaceMap(uint8_t* ledOut, String* nameOut, String* cityOut, int maxEntries) {
+int AppConfig::loadSpaceMap(uint8_t* ledOut, String* nameOut, String* cityOut, bool* disabledOut, int maxEntries) {
     // Use readOnly=false — on ESP32, begin() with readOnly=true fails if the
     // namespace has never been written before (e.g. fresh flash or after clear()).
     if (!_smPrefs.begin("smdata", /*readOnly=*/false)) return 0;
     int count = (int)_smPrefs.getInt("smCount", 0);
     if (count <= 0 || count > maxEntries) { _smPrefs.end(); return 0; }
     for (int i = 0; i < count; i++) {
-        ledOut[i]  = (uint8_t)_smPrefs.getInt(("smL" + String(i)).c_str(), 0);
-        nameOut[i] = _smPrefs.getString(("smN" + String(i)).c_str(), "");
-        cityOut[i] = _smPrefs.getString(("smC" + String(i)).c_str(), "");
+        ledOut[i]      = (uint8_t)_smPrefs.getInt(("smL" + String(i)).c_str(), 0);
+        nameOut[i]     = _smPrefs.getString(("smN" + String(i)).c_str(), "");
+        cityOut[i]     = _smPrefs.getString(("smC" + String(i)).c_str(), "");
+        disabledOut[i] = _smPrefs.getBool(("smD" + String(i)).c_str(), false);
     }
     _smPrefs.end();
     return count;
 }
 
-void AppConfig::saveSpaceMap(const uint8_t* led, const String* name, const String* city, int count) {
+void AppConfig::saveSpaceMap(const uint8_t* led, const String* name, const String* city, const bool* disabled, int count) {
     if (!_smPrefs.begin("smdata", /*readOnly=*/false)) return;
     _smPrefs.putInt("smCount", count);
     for (int i = 0; i < count; i++) {
         _smPrefs.putInt(("smL" + String(i)).c_str(), led[i]);
         _smPrefs.putString(("smN" + String(i)).c_str(), name[i]);
         _smPrefs.putString(("smC" + String(i)).c_str(), city[i]);
+        _smPrefs.putBool(("smD" + String(i)).c_str(), disabled[i]);
     }
     _smPrefs.end();
 }

@@ -55,7 +55,7 @@ function buildRow(i, name, city) {
     var rowStyle = isEmpty ? 'opacity:0.45' : '';
     return '<tr id="row_'+i+'" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragend="onDragEnd(event)" style="cursor:grab;'+rowStyle+'">'
         + '<td style="padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
-        + '<td style="padding:4px;text-align:center;white-space:nowrap"><button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="Blink to locate">&#128294;</button><span class="space-status" style="display:inline-block;min-width:80px;margin-left:6px;font-size:0.82em;vertical-align:middle;color:#888">&#8987; ...</span></td>'
+        + '<td style="padding:4px;text-align:center;white-space:nowrap"><input type="checkbox" class="dis-check" name="dis_'+i+'" title="Deaktivieren (LED bleibt aus)" onchange="onDisabledChange(this)"><button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;margin-left:4px;cursor:pointer" title="Blink to locate">&#128294;</button><span class="space-status" style="display:inline-block;min-width:80px;margin-left:6px;font-size:0.82em;vertical-align:middle;color:#888">&#8987; ...</span></td>'
         + '<td style="padding:4px;text-align:center;color:#555;font-size:0.9em;min-width:36px"><input type="hidden" name="led_'+i+'" value="'+i+'">'+i+'</td>'
         + '<td style="padding:4px"><input type="text" name="name_'+i+'" value="'+name+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
         + '<td style="padding:4px"><input type="text" name="city_'+i+'" value="'+city+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
@@ -68,6 +68,24 @@ function onNameOrCityInput(inp) {
     var inputs = row.querySelectorAll('input[type=text]');
     var empty = inputs[0].value === '' && inputs[1].value === '';
     row.style.opacity = empty ? '0.45' : '';
+}
+
+function onDisabledChange(cb) {
+    var row = cb.closest('tr');
+    markRowDirty(row);
+    applyDisabledStyle(row);
+}
+
+function applyDisabledStyle(row) {
+    var cb = row.querySelector('.dis-check');
+    var textInputs = row.querySelectorAll('input[type=text]');
+    var empty = textInputs.length >= 2 && textInputs[0].value === '' && textInputs[1].value === '';
+    var isDisabled = cb && cb.checked;
+    row.style.fontStyle = isDisabled ? 'italic' : '';
+    // Keep empty-row dimming intact; don't override it when not disabled.
+    if (!isDisabled && !empty) {
+        row.style.opacity = '';
+    }
 }
 
 function markRowDirty(row) {
@@ -317,6 +335,9 @@ function reindexRows() {
         var textInputs = r.querySelectorAll('input[type=text]');
         if (textInputs.length > 0) textInputs[0].name = 'name_' + rowCount;
         if (textInputs.length > 1) textInputs[1].name = 'city_' + rowCount;
+        // Update disabled checkbox name
+        var disCb = r.querySelector('.dis-check');
+        if (disCb) disCb.name = 'dis_' + rowCount;
         rowCount++;
     });
 }
@@ -758,13 +779,28 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
         s->print("' draggable='true' ondragstart='onDragStart(event)' ondragover='onDragOver(event)' ondrop='onDrop(event)' ondragend='onDragEnd(event)'");
         s->print(" style='cursor:grab;");
         if (isEmpty) s->print("opacity:0.45;");
+        // Find disabled state for this slot to apply italic on initial render.
+        bool slotDisabled = false;
+        for (int j = 0; j < (int)list.size(); j++) {
+            if (list[j].getLED() == i) { slotDisabled = list[j].isDisabled(); break; }
+        }
+        if (slotDisabled) s->print("font-style:italic;");
         s->print("'>");
         // drag handle
         s->print("<td style='padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab' title='Drag to reorder'>&#8597;</td>");
-        // blink + status
+        // disabled checkbox + blink + status
+        // Find if this LED slot is disabled in the stored mapping.
+        bool entryDisabled = false;
+        for (int j = 0; j < (int)list.size(); j++) {
+            if (list[j].getLED() == i) { entryDisabled = list[j].isDisabled(); break; }
+        }
         s->print("<td style='padding:4px;text-align:center;white-space:nowrap'>"
-                 "<button type='button' class='btn-blink' onclick='blinkLed(this)' "
-                 "style='background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer' "
+                 "<input type='checkbox' class='dis-check' name='dis_");
+        s->print(i);
+        s->print("' title='Deaktivieren (LED bleibt aus)' onchange='onDisabledChange(this)'");
+        if (entryDisabled) s->print(" checked");
+        s->print("><button type='button' class='btn-blink' onclick='blinkLed(this)' "
+                 "style='background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;margin-left:4px;cursor:pointer' "
                  "title='Blink to locate'>&#128294;</button>"
                  "<span class='space-status' style='display:inline-block;min-width:80px;margin-left:6px;"
                  "font-size:0.82em;vertical-align:middle;color:#888'>&#8987; ...</span></td>");
@@ -868,16 +904,19 @@ void SettingsWebServer::handleSpaceMapPost(AsyncWebServerRequest* request) {
         String ledKey  = "led_"  + String(idx);
         String nameKey = "name_" + String(idx);
         String cityKey = "city_" + String(idx);
+        String disKey  = "dis_"  + String(idx);
 
         if (!request->hasParam(ledKey, true)) break;
 
         String ledStr  = request->getParam(ledKey,  true)->value();
         String nameStr = request->hasParam(nameKey, true) ? request->getParam(nameKey, true)->value() : "";
         String cityStr = request->hasParam(cityKey, true) ? request->getParam(cityKey, true)->value() : "";
+        // Checkboxes are only submitted when checked — absence means unchecked.
+        bool   disVal  = request->hasParam(disKey, true);
 
         uint8_t ledNum = (uint8_t)constrain(ledStr.toInt(), 0, 255);
         // Store every slot — empty name means LED will be off (black).
-        newList.emplace_back(ledNum, nameStr, cityStr);
+        newList.emplace_back(ledNum, nameStr, cityStr, disVal);
     }
 
     DataSpaceList::getInstance().saveList(newList);

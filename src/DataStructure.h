@@ -13,11 +13,13 @@ struct SpaceSearchList {
     uint8_t ledIndex;
     String  name;
     String  city;
+    bool    disabled;
 
-    SpaceSearchList(uint8_t ledIndex, String name, String city) {
-        this->ledIndex = ledIndex;
-        this->name     = name;
-        this->city     = city;
+    SpaceSearchList(uint8_t ledIndex, String name, String city, bool disabled = false) {
+        this->ledIndex  = ledIndex;
+        this->name      = name;
+        this->city      = city;
+        this->disabled  = disabled;
     }
 
     int getLED() const {
@@ -26,6 +28,10 @@ struct SpaceSearchList {
 
     String getName() const {
         return this->name;
+    }
+
+    bool isDisabled() const {
+        return this->disabled;
     }
 };
 

@@ -32,12 +32,13 @@ void DataSpaceList::ensureLoaded() {
     uint8_t led[SPACEMAP_MAX_ENTRIES];
     String  name[SPACEMAP_MAX_ENTRIES];
     String  city[SPACEMAP_MAX_ENTRIES];
-    int count = AppConfig::getInstance().loadSpaceMap(led, name, city, SPACEMAP_MAX_ENTRIES);
+    bool    disabled[SPACEMAP_MAX_ENTRIES];
+    int count = AppConfig::getInstance().loadSpaceMap(led, name, city, disabled, SPACEMAP_MAX_ENTRIES);
 
     if (count > 0) {
         _list.clear();
         for (int i = 0; i < count; i++) {
-            _list.emplace_back(led[i], name[i], city[i]);
+            _list.emplace_back(led[i], name[i], city[i], disabled[i]);
         }
         _loaded = true;
     } else {
@@ -51,12 +52,14 @@ void DataSpaceList::ensureLoaded() {
         uint8_t dLed[SPACEMAP_MAX_ENTRIES];
         String  dName[SPACEMAP_MAX_ENTRIES];
         String  dCity[SPACEMAP_MAX_ENTRIES];
+        bool    dDisabled[SPACEMAP_MAX_ENTRIES];
         for (int i = 0; i < defaultSearchListSize; i++) {
-            dLed[i]  = (uint8_t)_list[i].getLED();
-            dName[i] = _list[i].getName();
-            dCity[i] = _list[i].city;
+            dLed[i]      = (uint8_t)_list[i].getLED();
+            dName[i]     = _list[i].getName();
+            dCity[i]     = _list[i].city;
+            dDisabled[i] = _list[i].disabled;
         }
-        AppConfig::getInstance().saveSpaceMap(dLed, dName, dCity, defaultSearchListSize);
+        AppConfig::getInstance().saveSpaceMap(dLed, dName, dCity, dDisabled, defaultSearchListSize);
     }
 }
 
@@ -96,14 +99,16 @@ void DataSpaceList::saveList(const std::vector<SpaceSearchList>& list) {
     uint8_t led[SPACEMAP_MAX_ENTRIES];
     String  name[SPACEMAP_MAX_ENTRIES];
     String  city[SPACEMAP_MAX_ENTRIES];
+    bool    disabled[SPACEMAP_MAX_ENTRIES];
     int count = (int)list.size();
     if (count > SPACEMAP_MAX_ENTRIES) count = SPACEMAP_MAX_ENTRIES;
     for (int i = 0; i < count; i++) {
-        led[i]  = (uint8_t)list[i].getLED();
-        name[i] = list[i].getName();
-        city[i] = list[i].city;
+        led[i]      = (uint8_t)list[i].getLED();
+        name[i]     = list[i].getName();
+        city[i]     = list[i].city;
+        disabled[i] = list[i].disabled;
     }
-    AppConfig::getInstance().saveSpaceMap(led, name, city, count);
+    AppConfig::getInstance().saveSpaceMap(led, name, city, disabled, count);
 }
 
 void DataSpaceList::resetToDefault() {
@@ -119,11 +124,13 @@ void DataSpaceList::resetToDefault() {
     uint8_t led[SPACEMAP_MAX_ENTRIES];
     String  name[SPACEMAP_MAX_ENTRIES];
     String  city[SPACEMAP_MAX_ENTRIES];
+    bool    disabled[SPACEMAP_MAX_ENTRIES];
     int count = (int)_list.size();
     for (int i = 0; i < count; i++) {
-        led[i]  = (uint8_t)_list[i].getLED();
-        name[i] = _list[i].getName();
-        city[i] = _list[i].city;
+        led[i]      = (uint8_t)_list[i].getLED();
+        name[i]     = _list[i].getName();
+        city[i]     = _list[i].city;
+        disabled[i] = _list[i].disabled;
     }
-    AppConfig::getInstance().saveSpaceMap(led, name, city, count);
+    AppConfig::getInstance().saveSpaceMap(led, name, city, disabled, count);
 }

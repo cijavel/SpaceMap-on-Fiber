@@ -1,6 +1,7 @@
 #include "NeoPixelLED.h"
 #include <NeoPixelBus.h>
 #include "AppConfig.h"
+#include "DataSpaceList.h"
 
 NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(LED_COUNT, LED_DATA_PIN);
 
@@ -50,11 +51,22 @@ bool NeoPixelLED::updateLEDsUnsafe(std::vector<SpaceStatusList>& spaceStatusList
 
     for (const auto& entry : spaceStatusList) {
         RgbColor color;
-        switch (entry.getStatus()) {
-            case SpaceStatus::OPEN:    color = scaleBrightness(colorOpen,    brightness); break;
-            case SpaceStatus::CLOSED:  color = scaleBrightness(colorClosed,  brightness); break;
-            case SpaceStatus::UNKNOWN: color = scaleBrightness(colorUnknown, brightness); break;
-            default:                   color = scaleBrightness(colorOff,     brightness); break;
+        // Check if the LED is disabled in the mapping — if so, keep it off
+        // regardless of the actual space status.
+        bool isDisabled = false;
+        const auto& mapping = DataSpaceList::getInstance().getList();
+        for (const auto& m : mapping) {
+            if (m.getLED() == entry.getLED()) { isDisabled = m.isDisabled(); break; }
+        }
+        if (isDisabled) {
+            color = colorOff;
+        } else {
+            switch (entry.getStatus()) {
+                case SpaceStatus::OPEN:    color = scaleBrightness(colorOpen,    brightness); break;
+                case SpaceStatus::CLOSED:  color = scaleBrightness(colorClosed,  brightness); break;
+                case SpaceStatus::UNKNOWN: color = scaleBrightness(colorUnknown, brightness); break;
+                default:                   color = scaleBrightness(colorOff,     brightness); break;
+            }
         }
         strip.SetPixelColor(entry.getLED(), color);
     }
