@@ -43,9 +43,16 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
     DataSpaceList& spaceDirectory = DataSpaceList::getInstance();
 
     // Snapshot watch list for unmatched-name tracking.
+    // Empty entries (no name configured) are excluded from matching and
+    // must never appear as "not found" in the status report.
     const auto& watchList = spaceDirectory.getList();
-    _lastWatchListSize = (int)watchList.size();
     std::vector<bool> matchedFlags(watchList.size(), false);
+
+    int activeWatchCount = 0;
+    for (const auto& entry : watchList) {
+        if (entry.getName().length() > 0) activeWatchCount++;
+    }
+    _lastWatchListSize = activeWatchCount;
 
     HTTPClient http;
     WiFiClientSecure client;
@@ -120,8 +127,9 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
     http.end();
 
     // Collect watch-list entries that never appeared in the API response.
+    // Skip empty slots — they are intentionally unused and not an error.
     for (size_t wi = 0; wi < watchList.size(); wi++) {
-        if (!matchedFlags[wi]) {
+        if (!matchedFlags[wi] && watchList[wi].getName().length() > 0) {
             _lastUnmatchedNames.push_back(watchList[wi].getName());
         }
     }
