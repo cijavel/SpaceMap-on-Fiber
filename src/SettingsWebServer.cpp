@@ -55,7 +55,7 @@ function buildRow(i, name, city) {
     var rowStyle = isEmpty ? 'opacity:0.45' : '';
     return '<tr id="row_'+i+'" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragend="onDragEnd(event)" style="cursor:grab;'+rowStyle+'">'
         + '<td style="padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
-        + '<td style="padding:4px;text-align:center;white-space:nowrap"><button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="Blink to locate">&#128294;</button><span class="space-status" style="display:inline-block;min-width:80px;margin-left:6px;font-size:0.82em;vertical-align:middle;color:#888">&#8212;</span></td>'
+        + '<td style="padding:4px;text-align:center;white-space:nowrap"><button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="Blink to locate">&#128294;</button><span class="space-status" style="display:inline-block;min-width:80px;margin-left:6px;font-size:0.82em;vertical-align:middle;color:#888">&#8987; ...</span></td>'
         + '<td style="padding:4px;text-align:center;color:#555;font-size:0.9em;min-width:36px"><input type="hidden" name="led_'+i+'" value="'+i+'">'+i+'</td>'
         + '<td style="padding:4px"><input type="text" name="name_'+i+'" value="'+name+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
         + '<td style="padding:4px"><input type="text" name="city_'+i+'" value="'+city+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
@@ -221,6 +221,10 @@ function blinkLed(btn) {
 var _lastAgeSec = -1;
 
 function updateSpaceStatus() {
+    // Show loading indicator on all status spans while the fetch is in flight.
+    document.querySelectorAll('#mapBody .space-status').forEach(function(s) {
+        s.style.color = '#888'; s.title = ''; s.innerHTML = '&#8987; ...';
+    });
     Promise.all([
         fetch('/api/spacestatus').then(function(r) { return r.json(); }),
         fetch('/api/status').then(function(r) { return r.json(); })
@@ -761,7 +765,7 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
                  "style='background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer' "
                  "title='Blink to locate'>&#128294;</button>"
                  "<span class='space-status' style='display:inline-block;min-width:80px;margin-left:6px;"
-                 "font-size:0.82em;vertical-align:middle;color:#888'>&#8212;</span></td>");
+                 "font-size:0.82em;vertical-align:middle;color:#888'>&#8987; ...</span></td>");
         // LED# — hidden input + visible label
         s->print("<td style='padding:4px;text-align:center;color:#555;font-size:0.9em;min-width:40px'>");
         s->print("<input type='hidden' name='led_"); s->print(i); s->print("' value='"); s->print(i); s->print("'>");
