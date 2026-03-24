@@ -70,6 +70,11 @@ ARCHITECTURE:
                                                        afterwards
                             GET  /spacemap/export   — Download all LED_COUNT slots as .txt
                                                        (incl. empty)
+                            GET  /api/spacemap       — JSON array of all LED_COUNT slots
+                                                       [{led, name, city, disabled}, …];
+                                                       consumed by /spacemap JS to lazy-load the
+                                                       editor table and avoid heap pressure on
+                                                       the ESP32 during initial page render
                             GET  /api/status        — JSON: httpCode, ok, ageSec, url, foundCount,
                                                        parseErrors, totalObjects, watchListSize,
                                                        unmatched[]
