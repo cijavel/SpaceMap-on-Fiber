@@ -221,10 +221,6 @@ function blinkLed(btn) {
 var _lastAgeSec = -1;
 
 function updateSpaceStatus() {
-    // Show loading indicator on all status spans while the fetch is in flight.
-    document.querySelectorAll('#mapBody .space-status').forEach(function(s) {
-        s.style.color = '#888'; s.title = ''; s.innerHTML = '&#8987; ...';
-    });
     Promise.all([
         fetch('/api/spacestatus').then(function(r) { return r.json(); }),
         fetch('/api/status').then(function(r) { return r.json(); })
