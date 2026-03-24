@@ -240,6 +240,12 @@ function updateSpaceStatus() {
         }
         _lastAgeSec = currentAge;
 
+        // ESP has never completed a fetch yet (httpCode === 0) — keep the
+        // hourglass indicator in place and try again shortly.
+        if (apiStatus.httpCode === 0) {
+            return;
+        }
+
         var unmatchedSet = {};
         if (apiStatus.ok && apiStatus.parseErrors === 0 && apiStatus.unmatched) {
             apiStatus.unmatched.forEach(function(n) { unmatchedSet[n.toLowerCase().trim()] = true; });
