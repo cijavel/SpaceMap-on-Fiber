@@ -35,6 +35,7 @@ private:
     void handleSpaceMapGet(AsyncWebServerRequest* request);
     void handleSpaceMapPost(AsyncWebServerRequest* request);
     void handleSpaceMapReset(AsyncWebServerRequest* request);
+    void handleApiSpaceMapGet(AsyncWebServerRequest* request);
     void handleSpaceMapExport(AsyncWebServerRequest* request);
     void handleSpaceMapBlink(AsyncWebServerRequest* request);
     void handleNotFound(AsyncWebServerRequest* request);

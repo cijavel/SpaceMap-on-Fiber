@@ -50,12 +50,13 @@ static const char SPACEMAP_JS[] PROGMEM = R"rawjs(
 <script>
 var rowCount = 0; // set dynamically before this script runs
 
-function buildRow(i, name, city) {
+function buildRow(i, name, city, disabled) {
     var isEmpty = (name === '' && city === '');
-    var rowStyle = isEmpty ? 'opacity:0.45' : '';
+    var rowStyle = isEmpty ? 'opacity:0.45;' : '';
+    if (disabled) rowStyle += 'font-style:italic;';
     return '<tr id="row_'+i+'" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragend="onDragEnd(event)" style="cursor:grab;'+rowStyle+'">'
         + '<td style="padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
-        + '<td style="padding:4px;text-align:center;white-space:nowrap"><input type="checkbox" class="dis-check" name="dis_'+i+'" title="Deaktivieren (LED bleibt aus)" onchange="onDisabledChange(this)"><button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;margin-left:4px;cursor:pointer" title="Blink to locate">&#128294;</button><span class="space-status" style="display:inline-block;min-width:80px;margin-left:6px;font-size:0.82em;vertical-align:middle;color:#888">&#8987; ...</span></td>'
+        + '<td style="padding:4px;text-align:center;white-space:nowrap"><input type="checkbox" class="dis-check" name="dis_'+i+'" title="Deaktivieren (LED bleibt aus)" onchange="onDisabledChange(this)"'+(disabled?' checked':'')+'>  <button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;margin-left:4px;cursor:pointer" title="Blink to locate">&#128294;</button><span class="space-status" style="display:inline-block;min-width:80px;margin-left:6px;font-size:0.82em;vertical-align:middle;color:#888">&#8987; ...</span></td>'
         + '<td style="padding:4px;text-align:center;color:#555;font-size:0.9em;min-width:36px"><input type="hidden" name="led_'+i+'" value="'+i+'">'+i+'</td>'
         + '<td style="padding:4px"><input type="text" name="name_'+i+'" value="'+name+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
         + '<td style="padding:4px"><input type="text" name="city_'+i+'" value="'+city+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
@@ -485,6 +486,10 @@ void SettingsWebServer::registerRoutes() {
         handleSpaceMapPost(req);
     });
 
+    _server.on("/api/spacemap", HTTP_GET, [this](AsyncWebServerRequest* req) {
+        handleApiSpaceMapGet(req);
+    });
+
     _server.on("/api/spacestatus", HTTP_GET, [this](AsyncWebServerRequest* req) {
         String json = "[";
         for (size_t i = 0; i < spaceStatusList.size(); i++) {
@@ -753,8 +758,6 @@ void SettingsWebServer::streamSettingsPage(AsyncResponseStream* s, const String&
 }
 
 void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String& message) {
-    const auto& list = DataSpaceList::getInstance().getList();
-
     s->print(htmlHeader("SpaceMap"));
     s->print(navBar());
     s->print("<h1>Hackerspace Mapping</h1>");
@@ -772,62 +775,8 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "</tr></thead>"
              "<tbody id='mapBody'>");
 
-    // Render exactly LED_COUNT rows — scales to 300+ LEDs without heap pressure.
-    // Build a pointer lookup (no String copies): nullptr = unoccupied slot.
-    static const String emptyString = "";
-    std::vector<const SpaceSearchList*> slotPtr(LED_COUNT, nullptr);
-    for (int j = 0; j < (int)list.size(); j++) {
-        int led = list[j].getLED();
-        if (led >= 0 && led < LED_COUNT) {
-            slotPtr[led] = &list[j];
-        }
-    }
-
-    for (int i = 0; i < LED_COUNT; i++) {
-        const SpaceSearchList* entry = slotPtr[i];
-        const String& entryName  = entry ? entry->getName()   : emptyString;
-        const String& entryCity  = entry ? entry->city        : emptyString;
-        bool isEmpty             = entryName.length() == 0 && entryCity.length() == 0;
-        bool entryDisabled       = entry ? entry->isDisabled() : false;
-
-        s->print("<tr id='row_"); s->print(i);
-        s->print("' draggable='true' ondragstart='onDragStart(event)' ondragover='onDragOver(event)' ondrop='onDrop(event)' ondragend='onDragEnd(event)'");
-        s->print(" style='cursor:grab;");
-        if (isEmpty)        s->print("opacity:0.45;");
-        if (entryDisabled)  s->print("font-style:italic;");
-        s->print("'>");
-        // drag handle
-        s->print("<td style='padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab' title='Drag to reorder'>&#8597;</td>");
-        // disabled checkbox + blink + status
-        s->print("<td style='padding:4px;text-align:center;white-space:nowrap'>"
-                 "<input type='checkbox' class='dis-check' name='dis_");
-        s->print(i);
-        s->print("' title='Deaktivieren (LED bleibt aus)' onchange='onDisabledChange(this)'");
-        if (entryDisabled) s->print(" checked");
-        s->print("><button type='button' class='btn-blink' onclick='blinkLed(this)' "
-                 "style='background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;margin-left:4px;cursor:pointer' "
-                 "title='Blink to locate'>&#128294;</button>"
-                 "<span class='space-status' style='display:inline-block;min-width:80px;margin-left:6px;"
-                 "font-size:0.82em;vertical-align:middle;color:#888'>&#8987; ...</span></td>");
-        // LED# — hidden input + visible label
-        s->print("<td style='padding:4px;text-align:center;color:#555;font-size:0.9em;min-width:40px'>");
-        s->print("<input type='hidden' name='led_"); s->print(i); s->print("' value='"); s->print(i); s->print("'>");
-        s->print(i);
-        s->print("</td>");
-        // Name input
-        s->print("<td style='padding:4px'><input type='text' name='name_"); s->print(i);
-        s->print("' value='"); s->print(entryName);
-        s->print("' placeholder='(leer)' style='width:100%;background:#1e1e1e;color:#eee;"
-                 "border:1px solid #3a3a3a;border-radius:4px;padding:4px' "
-                 "oninput='onNameOrCityInput(this)'></td>");
-        // City input
-        s->print("<td style='padding:4px'><input type='text' name='city_"); s->print(i);
-        s->print("' value='"); s->print(entryCity);
-        s->print("' placeholder='(leer)' style='width:100%;background:#1e1e1e;color:#eee;"
-                 "border:1px solid #3a3a3a;border-radius:4px;padding:4px' "
-                 "oninput='onNameOrCityInput(this)'></td>");
-        s->print("</tr>");
-    }
+    // tbody is populated by JS via fetch('/api/spacemap') — no rows rendered here.
+    // This keeps the initial HTML response small and avoids heap pressure on the ESP32.
 
     s->print("</tbody></table>"
              "<div style='margin-top:12px;display:flex;align-items:center;flex-wrap:wrap;gap:10px'>"
@@ -876,10 +825,24 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "<button type='submit' class='btn btn-reset'>&#8635; Reset to default</button>"
              "</form>");
 
-    // rowCount initialiser + large JS block from PROGMEM.
-    s->print("<script>var rowCount = ");
+    // Inject LED_COUNT so JS knows how many rows to expect, then load the mapping
+    // asynchronously from /api/spacemap to keep the initial HTML small.
+    s->print("<script>var LED_COUNT = ");
     s->print(LED_COUNT);
-    s->print(";</script>");
+    s->print("; var rowCount = 0;</script>"
+             "<script>"
+             "fetch('/api/spacemap').then(function(r){return r.json();}).then(function(entries){"
+             "var tbody=document.getElementById('mapBody');"
+             "var html='';"
+             "for(var i=0;i<LED_COUNT;i++){"
+             "var e=entries[i]||{led:i,name:'',city:'',disabled:false};"
+             "html+=buildRow(i,e.name,e.city,e.disabled);}"
+             "tbody.innerHTML=html;"
+             "rowCount=LED_COUNT;"
+             "updateSpaceStatus();"
+             "}).catch(function(){document.getElementById('mapBody').innerHTML="
+             "'<tr><td colspan=5 style=color:#e74c3c>&#9888; Failed to load mapping from /api/spacemap</td></tr>';});"
+             "</script>");
     s->print(FPSTR(SPACEMAP_JS));
 
     s->print(htmlFooter());
@@ -977,6 +940,31 @@ void SettingsWebServer::handleSpaceMapBlink(AsyncWebServerRequest* request) {
         delete bp;
         vTaskDelete(nullptr);
     }, "blink_task", 4096, p, 1, nullptr);
+}
+
+// --------------------------------------------------------------------------
+// /api/spacemap  – GET: compact JSON for the editor table
+// --------------------------------------------------------------------------
+void SettingsWebServer::handleApiSpaceMapGet(AsyncWebServerRequest* request) {
+    const auto& list = DataSpaceList::getInstance().getList();
+
+    // Build slot lookup.
+    std::vector<const SpaceSearchList*> byLed(LED_COUNT, nullptr);
+    for (const auto& e : list) {
+        if (e.getLED() < LED_COUNT) byLed[e.getLED()] = &e;
+    }
+
+    String json = "[";
+    for (int i = 0; i < LED_COUNT; i++) {
+        if (i > 0) json += ",";
+        const SpaceSearchList* e = byLed[i];
+        json += "{\"led\":" + String(i) +
+                ",\"name\":\"" + (e ? e->getName() : "") + "\"" +
+                ",\"city\":\"" + (e ? e->city       : "") + "\"" +
+                ",\"disabled\":" + (e && e->isDisabled() ? "true" : "false") + "}";
+    }
+    json += "]";
+    request->send(200, "application/json", json);
 }
 
 // --------------------------------------------------------------------------
