@@ -232,6 +232,7 @@ function updateSpaceStatus() {
             document.querySelectorAll('#mapBody .space-status').forEach(function(s) {
                 s.style.color = '#555'; s.title = 'No API data yet'; s.innerHTML = '&#8212;';
             });
+            return;
         }
         var byLed  = {};
         var byName = {};
