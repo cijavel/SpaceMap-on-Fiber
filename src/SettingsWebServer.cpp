@@ -216,6 +216,10 @@ function blinkLed(btn) {
         });
 }
 
+// Last known ageSec from /api/status — used to detect when the ESP has
+// fetched fresh data from the SpaceAPI so the UI can update immediately.
+var _lastAgeSec = -1;
+
 function updateSpaceStatus() {
     Promise.all([
         fetch('/api/spacestatus').then(function(r) { return r.json(); }),
@@ -224,16 +228,30 @@ function updateSpaceStatus() {
     .then(function(results) {
         var list      = results[0];
         var apiStatus = results[1];
+
+        // --- Detect a fresh ESP fetch by watching ageSec reset to a small value.
+        // When the ESP completes a new API poll, ageSec drops back near 0.
+        // We trigger an extra updateSpaceStatus() call a moment later so the
+        // UI reflects the new data as soon as it arrives.
+        var currentAge = (apiStatus && apiStatus.ageSec !== undefined) ? apiStatus.ageSec : -1;
+        if (_lastAgeSec > 5 && currentAge >= 0 && currentAge < _lastAgeSec) {
+            // ageSec reset — ESP just fetched new data; schedule an immediate refresh.
+            setTimeout(updateSpaceStatus, 500);
+        }
+        _lastAgeSec = currentAge;
+
         var unmatchedSet = {};
         if (apiStatus.ok && apiStatus.parseErrors === 0 && apiStatus.unmatched) {
             apiStatus.unmatched.forEach(function(n) { unmatchedSet[n.toLowerCase().trim()] = true; });
         }
+
         if (list.length === 0) {
             document.querySelectorAll('#mapBody .space-status').forEach(function(s) {
                 s.style.color = '#555'; s.title = 'No API data yet'; s.innerHTML = '&#8212;';
             });
             return;
         }
+
         var byLed  = {};
         var byName = {};
         list.forEach(function(e) {
@@ -270,7 +288,9 @@ function updateSpaceStatus() {
     });
 }
 
+// Initial call — zeigt Daten sofort wenn vorhanden, startet sonst den 2s-Retry.
 updateSpaceStatus();
+// Reguläres Polling alle 15 s als Fallback und für laufende Aktualisierung.
 setInterval(updateSpaceStatus, 15000);
 
 function reindexRows() {
