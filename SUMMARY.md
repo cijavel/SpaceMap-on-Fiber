@@ -15,11 +15,13 @@ ARCHITECTURE:
   DataSpaceList         — Singleton. Holds the LED↔Hackerspace mapping. Lazy-loaded from NVS;
                           falls back to built-in default list (DataSpaceList.cpp).
                           Always LED_COUNT (50) slots; empty entries (name="") render as black LEDs.
-                          Max 64 entries (SPACEMAP_MAX_ENTRIES).
+                          Each entry carries a `disabled` flag; disabled LEDs are forced off
+                          regardless of space status. Max 64 entries (SPACEMAP_MAX_ENTRIES).
   NeoPixelLED           — Singleton. Wraps NeoPixelBus strip. Thread-safe via FreeRTOS mutex.
                           Methods: initLEDs, enumerateLEDs (startup sequence),
-                          updateLEDs / updateLEDsUnsafe (apply status colors),
-                          blinkLED (locate single LED by blinking white 10×, then restores full strip).
+                          updateLEDs / updateLEDsUnsafe (apply status colors; skips disabled entries,
+                          forcing those LEDs off), blinkLED (locate single LED by blinking white 10×,
+                          then restores full strip).
   WebClientHandler      — Fetches SpaceAPI JSON over HTTPS (WiFiClientSecure, setInsecure),
                           streams and parses response object-by-object to keep heap usage low.
                           Tracks last HTTP code, attempt timestamp, found/parse/total counts,
@@ -35,6 +37,8 @@ ARCHITECTURE:
                             POST /settings/reset    — Reset settings to compile-time defaults
                             GET  /spacemap          — Hackerspace mapping editor. Fixed LED_COUNT rows,
                                                        LED# read-only label; drag to swap positions;
+                                                       per-entry disable checkbox (forces LED off on
+                                                       next update, row shown in italics);
                                                        import (replace by position or next free slot);
                                                        export includes all slots incl. empty ones.
                                                        Status column shows ⏳ until first ESP parse,
@@ -68,7 +72,7 @@ LED STATUS (onboard RGB_BUILTIN):
 
 NVS NAMESPACES:
   "spacemap" — App settings (wifiInterval, ledInterval, apiInterval, apiUrl, ledBright, obBright, ledMaxPwr)
-  "smdata"   — SpaceMap entries (smCount, smL0…smLN, smN0…smNN, smC0…smCN)
+  "smdata"   — SpaceMap entries (smCount, smL0…smLN, smN0…smNN, smC0…smCN, smD0…smDN)
 
 KNOWN ISSUES:
   1. blinkLED uses delay(150) × 20 = 3 s of blocking calls inside a FreeRTOS task.

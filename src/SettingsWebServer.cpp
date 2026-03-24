@@ -97,19 +97,19 @@ function markRowDirty(row) {
 
 function doImport() {
     var raw = document.getElementById('importArea').value;
-    // With position: { 2, "Name", "City"}
-    var rePos = /\{\s*(\d+)\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\}/g;
-    // Without position: { "Name", "City"}
-    var reNoPos = /\{\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\}/g;
+    // With position + optional disabled flag: { 2, "Name", "City"} or { 2, "Name", "City", 1}
+    var rePos = /\{\s*(\d+)\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"(?:\s*,\s*(\d+))?\s*\}/g;
+    // Without position + optional disabled flag: { "Name", "City"} or { "Name", "City", 1}
+    var reNoPos = /\{\s*"([^"]*)"\s*,\s*"([^"]*)"(?:\s*,\s*(\d+))?\s*\}/g;
     var m;
     var withPos = {};
     while ((m = rePos.exec(raw)) !== null) {
-        withPos[parseInt(m[1], 10)] = { pos: parseInt(m[1], 10), name: m[2], city: m[3] };
+        withPos[parseInt(m[1], 10)] = { pos: parseInt(m[1], 10), name: m[2], city: m[3], disabled: m[4] === '1' };
     }
-    var stripped = raw.replace(/\{\s*\d+\s*,\s*"[^"]*"\s*,\s*"[^"]*"\s*\}/g, '');
+    var stripped = raw.replace(/\{\s*\d+\s*,\s*"[^"]*"\s*,\s*"[^"]*"(?:\s*,\s*\d+)?\s*\}/g, '');
     var noPos = [];
     while ((m = reNoPos.exec(stripped)) !== null) {
-        noPos.push({ name: m[1], city: m[2] });
+        noPos.push({ name: m[1], city: m[2], disabled: m[3] === '1' });
     }
     if (Object.keys(withPos).length === 0 && noPos.length === 0) {
         alert('Keine Eintr\u00e4ge gefunden.\nErwartetes Format:\n{ 2, "MuCCC", "Munich"}\noder: { "MuCCC", "Munich"}');
@@ -121,10 +121,13 @@ function doImport() {
         if (p.pos >= 0 && p.pos < rows.length) {
             var row = rows[p.pos];
             var inputs = row.querySelectorAll('input[type=text]');
+            var disCb  = row.querySelector('.dis-check');
             if (inputs.length >= 2) {
                 inputs[0].value = p.name;
                 inputs[1].value = p.city;
-                row.style.opacity = (p.name === '' && p.city === '') ? '0.45' : '';
+                if (disCb) disCb.checked = p.disabled;
+                applyDisabledStyle(row);
+                row.style.opacity = (p.name === '' && p.city === '') ? '0.45' : row.style.opacity;
                 markRowDirty(row);
             }
         }
@@ -134,11 +137,13 @@ function doImport() {
         while (freeIdx < rows.length) {
             var row = rows[freeIdx];
             var inputs = row.querySelectorAll('input[type=text]');
+            var disCb  = row.querySelector('.dis-check');
             freeIdx++;
             if (inputs.length >= 2 && inputs[0].value === '') {
                 inputs[0].value = p.name;
                 inputs[1].value = p.city;
-                row.style.opacity = '';
+                if (disCb) disCb.checked = p.disabled;
+                applyDisabledStyle(row);
                 markRowDirty(row);
                 break;
             }
@@ -201,10 +206,12 @@ function doExport() {
     rows.forEach(function(r) {
         var ledHidden = r.querySelector('input[type=hidden]');
         var textInputs = r.querySelectorAll('input[type=text]');
-        var led  = ledHidden ? ledHidden.value : '0';
-        var name = textInputs.length > 0 ? textInputs[0].value : '';
-        var city = textInputs.length > 1 ? textInputs[1].value : '';
-        parts.push('{ ' + led + ', "' + name + '", "' + city + '"}');
+        var disCb = r.querySelector('.dis-check');
+        var led      = ledHidden ? ledHidden.value : '0';
+        var name     = textInputs.length > 0 ? textInputs[0].value : '';
+        var city     = textInputs.length > 1 ? textInputs[1].value : '';
+        var disabled = (disCb && disCb.checked) ? '1' : '0';
+        parts.push('{ ' + led + ', "' + name + '", "' + city + '", ' + disabled + '}');
     });
     var blob = new Blob([parts.join(', ') + '\n'], { type: 'text/plain' });
     var a = document.createElement('a');
@@ -765,35 +772,33 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "</tr></thead>"
              "<tbody id='mapBody'>");
 
-    // Render exactly LED_COUNT rows — empty entries are rendered with dimmed opacity.
-    for (int i = 0; i < LED_COUNT; i++) {
-        // Find matching entry (list may be shorter or have gaps)
-        String entryName = "";
-        String entryCity = "";
-        for (int j = 0; j < (int)list.size(); j++) {
-            if (list[j].getLED() == i) { entryName = list[j].getName(); entryCity = list[j].city; break; }
+    // Render exactly LED_COUNT rows — scales to 300+ LEDs without heap pressure.
+    // Build a pointer lookup (no String copies): nullptr = unoccupied slot.
+    static const String emptyString = "";
+    std::vector<const SpaceSearchList*> slotPtr(LED_COUNT, nullptr);
+    for (int j = 0; j < (int)list.size(); j++) {
+        int led = list[j].getLED();
+        if (led >= 0 && led < LED_COUNT) {
+            slotPtr[led] = &list[j];
         }
-        bool isEmpty = entryName.length() == 0 && entryCity.length() == 0;
+    }
+
+    for (int i = 0; i < LED_COUNT; i++) {
+        const SpaceSearchList* entry = slotPtr[i];
+        const String& entryName  = entry ? entry->getName()   : emptyString;
+        const String& entryCity  = entry ? entry->city        : emptyString;
+        bool isEmpty             = entryName.length() == 0 && entryCity.length() == 0;
+        bool entryDisabled       = entry ? entry->isDisabled() : false;
 
         s->print("<tr id='row_"); s->print(i);
         s->print("' draggable='true' ondragstart='onDragStart(event)' ondragover='onDragOver(event)' ondrop='onDrop(event)' ondragend='onDragEnd(event)'");
         s->print(" style='cursor:grab;");
-        if (isEmpty) s->print("opacity:0.45;");
-        // Find disabled state for this slot to apply italic on initial render.
-        bool slotDisabled = false;
-        for (int j = 0; j < (int)list.size(); j++) {
-            if (list[j].getLED() == i) { slotDisabled = list[j].isDisabled(); break; }
-        }
-        if (slotDisabled) s->print("font-style:italic;");
+        if (isEmpty)        s->print("opacity:0.45;");
+        if (entryDisabled)  s->print("font-style:italic;");
         s->print("'>");
         // drag handle
         s->print("<td style='padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab' title='Drag to reorder'>&#8597;</td>");
         // disabled checkbox + blink + status
-        // Find if this LED slot is disabled in the stored mapping.
-        bool entryDisabled = false;
-        for (int j = 0; j < (int)list.size(); j++) {
-            if (list[j].getLED() == i) { entryDisabled = list[j].isDisabled(); break; }
-        }
         s->print("<td style='padding:4px;text-align:center;white-space:nowrap'>"
                  "<input type='checkbox' class='dis-check' name='dis_");
         s->print(i);
@@ -848,6 +853,7 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "<pre style='background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:10px;"
              "font-size:0.8em;color:#888;overflow-x:auto;margin:0 0 10px 0;'>"
              "{ 2, \"MuCCC\", \"Munich\"}&#10;"
+             "{ 2, \"MuCCC\", \"Munich\", 1}  &larr; deaktiviert&#10;"
              "{ \"MuCCC\", \"Munich\"}"
              "</pre>"
              "<textarea id='importArea' rows='6' style='width:100%;background:#1e1e1e;color:#eee;"
