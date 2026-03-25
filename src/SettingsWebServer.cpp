@@ -82,9 +82,11 @@ function onDisabledChange(cb) {
 function applyDisabledStyle(row) {
     var cb = row.querySelector('.dis-check');
     var textInputs = row.querySelectorAll('input[type=text]');
+    var span = row.querySelector('.space-status');
     var empty = textInputs.length >= 2 && textInputs[0].value === '' && textInputs[1].value === '';
     var isDisabled = cb && cb.checked;
     row.style.fontStyle = isDisabled ? 'italic' : '';
+    if (span) span.style.color = isDisabled ? '#bbb' : '';
     // Keep empty-row dimming intact; don't override it when not disabled.
     if (!isDisabled && !empty) {
         row.style.opacity = '';
@@ -309,6 +311,8 @@ function updateSpaceStatus() {
                 if (row.style.background === 'rgb(42, 26, 0)') { row.style.background = ''; row.style.outline = ''; }
             }
             span.title = '';
+            var disCb = row.querySelector('.dis-check');
+            if (disCb && disCb.checked) { span.style.color = '#bbb'; return; }
             if      (status === 'OPEN')    { span.style.color = '#2dbe60'; span.innerHTML = '&#9679; OPEN'; }
             else if (status === 'CLOSED')  { span.style.color = '#e74c3c'; span.innerHTML = '&#9679; CLOSED'; }
             else if (status === 'UNKNOWN') { span.style.color = '#4a90d9'; span.innerHTML = '&#9679; UNKNOWN'; }
