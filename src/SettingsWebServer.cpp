@@ -491,22 +491,27 @@ void SettingsWebServer::registerRoutes() {
     });
 
     _server.on("/api/spacestatus", HTTP_GET, [this](AsyncWebServerRequest* req) {
-        String json = "[";
+        AsyncResponseStream* s = req->beginResponseStream("application/json");
+        s->print("[");
         for (size_t i = 0; i < spaceStatusList.size(); i++) {
             const auto& e = spaceStatusList[i];
-            String statusStr;
+            const char* statusStr;
             switch (e.getStatus()) {
-                case SpaceStatus::OPEN:    statusStr = "OPEN";    break;
-                case SpaceStatus::CLOSED:  statusStr = "CLOSED";  break;
-                default:                   statusStr = "UNKNOWN"; break;
+                case SpaceStatus::OPEN:   statusStr = "OPEN";    break;
+                case SpaceStatus::CLOSED: statusStr = "CLOSED";  break;
+                default:                  statusStr = "UNKNOWN"; break;
             }
-            if (i > 0) json += ",";
-            json += "{\"name\":\"" + e.getName() +
-                    "\",\"status\":\"" + statusStr +
-                    "\",\"led\":"     + String(e.getLED()) + "}";
+            if (i > 0) s->print(",");
+            s->print("{\"name\":\"");
+            s->print(e.getName());
+            s->print("\",\"status\":\"");
+            s->print(statusStr);
+            s->print("\",\"led\":");
+            s->print(e.getLED());
+            s->print("}");
         }
-        json += "]";
-        req->send(200, "application/json", json);
+        s->print("]");
+        req->send(s);
     });
 
     _server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest* req) {
@@ -948,23 +953,28 @@ void SettingsWebServer::handleSpaceMapBlink(AsyncWebServerRequest* request) {
 void SettingsWebServer::handleApiSpaceMapGet(AsyncWebServerRequest* request) {
     const auto& list = DataSpaceList::getInstance().getList();
 
-    // Build slot lookup.
     std::vector<const SpaceSearchList*> byLed(LED_COUNT, nullptr);
     for (const auto& e : list) {
         if (e.getLED() < LED_COUNT) byLed[e.getLED()] = &e;
     }
 
-    String json = "[";
+    AsyncResponseStream* s = request->beginResponseStream("application/json");
+    s->print("[");
     for (int i = 0; i < LED_COUNT; i++) {
-        if (i > 0) json += ",";
+        if (i > 0) s->print(",");
         const SpaceSearchList* e = byLed[i];
-        json += "{\"led\":" + String(i) +
-                ",\"name\":\"" + (e ? e->getName() : "") + "\"" +
-                ",\"city\":\"" + (e ? e->city       : "") + "\"" +
-                ",\"disabled\":" + (e && e->isDisabled() ? "true" : "false") + "}";
+        s->print("{\"led\":");
+        s->print(i);
+        s->print(",\"name\":\"");
+        s->print(e ? e->getName() : "");
+        s->print("\",\"city\":\"");
+        s->print(e ? e->city : "");
+        s->print("\",\"disabled\":");
+        s->print((e && e->isDisabled()) ? "true" : "false");
+        s->print("}");
     }
-    json += "]";
-    request->send(200, "application/json", json);
+    s->print("]");
+    request->send(s);
 }
 
 // --------------------------------------------------------------------------
@@ -979,19 +989,25 @@ void SettingsWebServer::handleSpaceMapExport(AsyncWebServerRequest* request) {
         if (e.getLED() < LED_COUNT) byLed[e.getLED()] = &e;
     }
 
-    String out = "";
+    AsyncResponseStream* s = request->beginResponseStream("application/octet-stream");
+    s->addHeader("Content-Disposition", "attachment; filename=\"searchList.txt\"");
+    s->addHeader("Content-Transfer-Encoding", "binary");
     for (int i = 0; i < LED_COUNT; i++) {
-        if (i > 0) out += ", ";
+        if (i > 0) s->print(", ");
         if (byLed[i]) {
-            out += "{ " + String(i) + ", \"" + byLed[i]->getName() + "\", \"" + byLed[i]->city + "\"}";
+            s->print("{ ");
+            s->print(i);
+            s->print(", \"");
+            s->print(byLed[i]->getName());
+            s->print("\", \"");
+            s->print(byLed[i]->city);
+            s->print("\"}");
         } else {
-            out += "{ " + String(i) + ", \"\", \"\"}";
+            s->print("{ ");
+            s->print(i);
+            s->print(", \"\", \"\"}");
         }
     }
-    out += "\n";
-
-    AsyncWebServerResponse* resp = request->beginResponse(200, "application/octet-stream", out);
-    resp->addHeader("Content-Disposition", "attachment; filename=\"searchList.txt\"");
-    resp->addHeader("Content-Transfer-Encoding", "binary");
-    request->send(resp);
+    s->print("\n");
+    request->send(s);
 }
