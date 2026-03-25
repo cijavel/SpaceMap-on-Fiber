@@ -520,25 +520,33 @@ void SettingsWebServer::registerRoutes() {
                             ? 0
                             : (millis() - WebClientHandler::getLastAttemptMs()) / 1000UL;
 
+        AsyncResponseStream* s = req->beginResponseStream("application/json");
+        s->print("{\"httpCode\":");
+        s->print(code);
+        s->print(",\"ok\":");
+        s->print(code == 200 ? "true" : "false");
+        s->print(",\"ageSec\":");
+        s->print(age);
+        s->print(",\"url\":\"");
+        s->print(AppConfig::getInstance().getSpaceApiUrl());
+        s->print("\",\"foundCount\":");
+        s->print(WebClientHandler::getLastFoundCount());
+        s->print(",\"parseErrors\":");
+        s->print(WebClientHandler::getLastParseErrors());
+        s->print(",\"totalObjects\":");
+        s->print(WebClientHandler::getLastTotalObjects());
+        s->print(",\"watchListSize\":");
+        s->print(WebClientHandler::getLastWatchListSize());
+        s->print(",\"unmatched\":[");
         const auto& unmatched = WebClientHandler::getLastUnmatchedNames();
-        String unmatchedJson = "[";
         for (size_t i = 0; i < unmatched.size(); i++) {
-            if (i > 0) unmatchedJson += ",";
-            unmatchedJson += "\"" + unmatched[i] + "\"";
+            if (i > 0) s->print(",");
+            s->print("\"");
+            s->print(unmatched[i]);
+            s->print("\"");
         }
-        unmatchedJson += "]";
-
-        String json = "{\"httpCode\":"    + String(code) +
-                      ",\"ok\":"          + (code == 200 ? "true" : "false") +
-                      ",\"ageSec\":"      + String(age) +
-                      ",\"url\":\""       + AppConfig::getInstance().getSpaceApiUrl() + "\"" +
-                      ",\"foundCount\":"  + String(WebClientHandler::getLastFoundCount()) +
-                      ",\"parseErrors\":" + String(WebClientHandler::getLastParseErrors()) +
-                      ",\"totalObjects\":" + String(WebClientHandler::getLastTotalObjects()) +
-                      ",\"watchListSize\":" + String(WebClientHandler::getLastWatchListSize()) +
-                      ",\"unmatched\":"   + unmatchedJson +
-                      "}";
-        req->send(200, "application/json", json);
+        s->print("]}");
+        req->send(s);
     });
 
     _server.onNotFound([this](AsyncWebServerRequest* req) {
