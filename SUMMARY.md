@@ -26,7 +26,8 @@ ARCHITECTURE:
                           13 entries). The web UI always displays LED_COUNT (50) fixed rows;
                           empty entries (name="") render as black LEDs.
                           Each entry carries a `disabled` flag; disabled LEDs are forced off
-                          regardless of space status. Max 64 entries (SPACEMAP_MAX_ENTRIES).
+                          regardless of space status. Max LED_COUNT entries (SPACEMAP_LED_MAX);
+                          heap-allocated at runtime.
   NeoPixelLED           — Singleton. Wraps NeoPixelBus strip. Thread-safe via FreeRTOS mutex.
                           Methods: initLEDs, enumerateLEDs (startup sequence),
                           updateLEDs / updateLEDsUnsafe (apply status colors; skips disabled
@@ -42,8 +43,8 @@ ARCHITECTURE:
                           WIFI_MAX_FAILED_RECONNECTS failed attempts.
   TimeHandler           — Syncs NTP time (used for status change timestamps).
   SettingsWebServer     — Singleton. AsyncWebServer on port 80. Large HTML/CSS/JS blocks stored
-                          in PROGMEM and streamed directly into AsyncResponseStream — never built
-                          as a monolithic heap String. Routes:
+                          in PROGMEM and JSON API responses streamed directly into
+                          AsyncResponseStream — never built as a monolithic heap String. Routes:
                             GET  /                  — Overview page: live API health + parse status
                                                        (JS polls /api/status every 30 s)
                             GET  /settings          — Settings form (intervals, brightness,
