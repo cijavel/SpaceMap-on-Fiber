@@ -20,7 +20,7 @@ extern std::vector<SpaceStatusList> spaceStatusList;
 static const char CSS[] PROGMEM = R"css(
 body{font-family:sans-serif;margin:0;background:#111;color:#eee;}
 nav{background:#1a1a1a;padding:10px 20px;border-bottom:2px solid #e02020;}
-nav a{color:#1a7a3c;text-decoration:none;margin-right:16px;font-weight:bold;}
+nav a{color:#2dbe60;text-decoration:none;margin-right:16px;font-weight:bold;}
 nav a:hover{color:#fff;text-decoration:underline;}
 .container{max-width:700px;margin:30px auto;padding:0 16px;}
 h1{color:#1a7a3c;}
@@ -55,14 +55,14 @@ function buildRow(i, name, city, disabled) {
     var rowStyle = isEmpty ? 'opacity:0.45;' : '';
     if (disabled) rowStyle += 'font-style:italic;';
     return '<tr id="row_'+i+'" ondragover="onDragOver(event)" ondrop="onDrop(event)" style="'+rowStyle+'">'
-        + '<td draggable="true" ondragstart="onDragStart(event)" ondragend="onDragEnd(event)" style="padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
+        + '<td draggable="true" ondragstart="onDragStart(event)" ondragend="onDragEnd(event)" aria-label="Zeile verschieben" style="padding:4px;width:24px;color:#888;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
         + '<td style="padding:4px;text-align:center;color:#eee;font-size:0.9em;min-width:36px"><input type="hidden" name="led_'+i+'" value="'+i+'">'+i+'</td>'
-        + '<td style="padding:4px;text-align:center"><input type="checkbox" class="dis-check" name="dis_'+i+'" title="LED deaktivieren (bleibt aus)" onchange="onDisabledChange(this)"'+(disabled?' checked':'')+''+'></td>'
-        + '<td style="padding:4px;text-align:center"><button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="LED orten">&#128294;</button></td>'
-        + '<td style="padding:4px;text-align:center"><span class="space-status" style="display:inline-block;min-width:80px;font-size:0.82em;color:#555">&#8212;</span></td>'
+        + '<td style="padding:4px;text-align:center"><input type="checkbox" class="dis-check" name="dis_'+i+'" aria-label="LED deaktivieren" title="LED deaktivieren (bleibt aus)" onchange="onDisabledChange(this)"'+(disabled?' checked':'')+''+'></td>'
+        + '<td style="padding:4px;text-align:center"><button type="button" class="btn-blink" onclick="blinkLed(this)" aria-label="LED orten" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="LED orten">&#128294;</button></td>'
+        + '<td style="padding:4px;text-align:center"><span class="space-status" aria-live="polite" style="display:inline-block;min-width:80px;font-size:0.82em;color:#888">&#8212;</span></td>'
         + '<td style="padding:4px"><input type="text" name="name_'+i+'" value="'+name+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
         + '<td style="padding:4px"><input type="text" name="city_'+i+'" value="'+city+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
-        + '<td style="padding:4px;text-align:center"><button type="button" onclick="clearRow(this)" style="background:#3a1a1a;color:#e74c3c;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="Eintrag leeren">&#10005;</button></td>'
+        + '<td style="padding:4px;text-align:center"><button type="button" onclick="clearRow(this)" aria-label="Eintrag leeren" style="background:#3a1a1a;color:#e74c3c;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="Eintrag leeren">&#10005;</button></td>'
         + '</tr>';
 }
 
@@ -685,15 +685,15 @@ String SettingsWebServer::htmlHeader(const String& title) {
 }
 
 String SettingsWebServer::htmlFooter() {
-    return "</div></body></html>";
+    return "</div></main></body></html>";
 }
 
 String SettingsWebServer::navBar() {
-    return "<nav>"
+    return "<nav aria-label='Hauptnavigation'>"
            "<a href='/'>&#127968; Overview</a>"
            "<a href='/settings'>&#9881; Settings</a>"
            "<a href='/spacemap'>&#128280; SpaceMap</a>"
-           "</nav><div class='container'>";
+           "</nav><main><div class='container'>";
 }
 
 // --------------------------------------------------------------------------
@@ -707,11 +707,11 @@ void SettingsWebServer::streamIndexPage(AsyncResponseStream* s, const String& me
     s->print(navBar());
     s->print("<h1>SpaceMap on Fiber</h1>");
     s->print("<p>Welcome to the SpaceMap controller web interface.</p>");
-    s->print("<div id='apiStatus' style='margin-top:20px;padding:14px 18px;border-radius:6px;"
+    s->print("<div id='apiStatus' aria-live='polite' style='margin-top:20px;padding:14px 18px;border-radius:6px;"
              "background:#1a1a1a;border:1px solid #3a3a3a;max-width:480px;'>"
              "<span style='color:#888;font-size:0.9em'>&#8635; Checking API connection&hellip;</span>"
              "</div>");
-    s->print("<div id='parseStatus' style='margin-top:10px;padding:14px 18px;border-radius:6px;"
+    s->print("<div id='parseStatus' aria-live='polite' style='margin-top:10px;padding:14px 18px;border-radius:6px;"
              "background:#1a1a1a;border:1px solid #3a3a3a;max-width:480px;display:none;'></div>");
     s->print(FPSTR(INDEX_JS));
     if (message.length() > 0) {
@@ -740,40 +740,40 @@ void SettingsWebServer::streamSettingsPage(AsyncResponseStream* s, const String&
 
     s->print("<form method='POST' action='/settings'>");
     s->print("<h2>API</h2>");
-    s->print("<label>SpaceAPI URL</label>"
-             "<input type='url' name='apiUrl' value='");
+    s->print("<label for='apiUrl'>SpaceAPI URL</label>"
+             "<input id='apiUrl' type='url' name='apiUrl' value='");
     s->print(cfg.getSpaceApiUrl());
     s->print("'>");
 
-    s->print("<label>API polling interval (seconds)</label>"
-             "<input type='number' name='apiInterval' min='10' max='3600' value='");
+    s->print("<label for='apiInterval'>API polling interval (seconds)</label>"
+             "<input id='apiInterval' type='number' name='apiInterval' min='10' max='3600' value='");
     s->print(cfg.getIntervalApi());
     s->print("'>");
 
     s->print("<h2>WiFi</h2>");
-    s->print("<label>WiFi health-check interval (seconds)</label>"
-             "<input type='number' name='wifiInterval' min='30' max='86400' value='");
+    s->print("<label for='wifiInterval'>WiFi health-check interval (seconds)</label>"
+             "<input id='wifiInterval' type='number' name='wifiInterval' min='30' max='86400' value='");
     s->print(cfg.getIntervalWifiCheck());
     s->print("'>");
 
     s->print("<h2>LEDs</h2>");
-    s->print("<label>LED refresh interval (seconds)</label>"
-             "<input type='number' name='ledInterval' min='1' max='3600' value='");
+    s->print("<label for='ledInterval'>LED refresh interval (seconds)</label>"
+             "<input id='ledInterval' type='number' name='ledInterval' min='1' max='3600' value='");
     s->print(cfg.getIntervalLEDs());
     s->print("'>");
 
-    s->print("<label>LED brightness (0-255)</label>"
-             "<input type='number' name='ledBrightness' min='0' max='255' value='");
+    s->print("<label for='ledBrightness'>LED brightness (0-255)</label>"
+             "<input id='ledBrightness' type='number' name='ledBrightness' min='0' max='255' value='");
     s->print(cfg.getLedBrightness());
     s->print("'>");
 
-    s->print("<label>Onboard LED brightness (0-255)</label>"
-             "<input type='number' name='onboardBrightness' min='0' max='255' value='");
+    s->print("<label for='onboardBrightness'>Onboard LED brightness (0-255)</label>"
+             "<input id='onboardBrightness' type='number' name='onboardBrightness' min='0' max='255' value='");
     s->print(cfg.getOnboardBrightness());
     s->print("'>");
 
-    s->print("<label>Max. LED power draw (mA)</label>"
-             "<input type='number' name='ledMaxPower' min='100' max='5000' value='");
+    s->print("<label for='ledMaxPower'>Max. LED power draw (mA)</label>"
+             "<input id='ledMaxPower' type='number' name='ledMaxPower' min='100' max='5000' value='");
     s->print(cfg.getLedMaxPowerMa());
     s->print("'>");
 
@@ -799,12 +799,12 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "<table id='mapTable' style='width:100%;border-collapse:collapse;margin-top:8px'>"
              "<thead><tr>"
              "<th style='padding:6px;border-bottom:1px solid #3a3a3a;width:24px' title='Zeile ziehen zum Umsortieren'></th>"
-             "<th style='text-align:center;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a;width:40px' title='LED-Index (0 = erste LED)'>LED#</th>"
-             "<th style='padding:6px;border-bottom:1px solid #3a3a3a;text-align:center;color:#1a7a3c' title='LED deaktivieren – bleibt aus unabh&auml;ngig vom Space-Status'>Aus</th>"
-             "<th style='padding:6px;border-bottom:1px solid #3a3a3a;text-align:center;color:#1a7a3c' title='LED kurz aufblinken lassen zum Orten'>Blinken</th>"
-             "<th style='padding:6px;border-bottom:1px solid #3a3a3a;text-align:center;color:#1a7a3c' title='Aktueller Space-Status aus der SpaceAPI'>Status</th>"
-             "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a' title='Name exakt wie in der SpaceAPI'>Space Name</th>"
-             "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a' title='Stadt (optional, nur zur Anzeige)'>City</th>"
+             "<th style='text-align:center;padding:6px;color:#2dbe60;border-bottom:1px solid #3a3a3a;width:40px' title='LED-Index (0 = erste LED)'>LED#</th>"
+             "<th style='padding:6px;border-bottom:1px solid #3a3a3a;text-align:center;color:#2dbe60' title='LED deaktivieren – bleibt aus unabh&auml;ngig vom Space-Status'>Aus</th>"
+             "<th style='padding:6px;border-bottom:1px solid #3a3a3a;text-align:center;color:#2dbe60' title='LED kurz aufblinken lassen zum Orten'>Blinken</th>"
+             "<th style='padding:6px;border-bottom:1px solid #3a3a3a;text-align:center;color:#2dbe60' title='Aktueller Space-Status aus der SpaceAPI'>Status</th>"
+             "<th style='text-align:left;padding:6px;color:#2dbe60;border-bottom:1px solid #3a3a3a' title='Name exakt wie in der SpaceAPI'>Space Name</th>"
+             "<th style='text-align:left;padding:6px;color:#2dbe60;border-bottom:1px solid #3a3a3a' title='Stadt (optional, nur zur Anzeige)'>City</th>"
              "<th style='padding:6px;border-bottom:1px solid #3a3a3a;width:32px'></th>"
              "</tr></thead>"
              "<tbody id='mapBody'>");
@@ -839,7 +839,7 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "{ 2, \"MuCCC\", \"Munich\", 1}  &larr; deaktiviert&#10;"
              "{ \"MuCCC\", \"Munich\"}"
              "</pre>"
-             "<textarea id='importArea' rows='6' style='width:100%;background:#1e1e1e;color:#eee;"
+             "<textarea id='importArea' aria-label='Eintr&auml;ge zum Importieren' rows='6' style='width:100%;background:#1e1e1e;color:#eee;"
              "border:1px solid #3a3a3a;border-radius:4px;padding:7px;font-family:monospace;"
              "font-size:0.85em;box-sizing:border-box;'></textarea>"
              "<div style='margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap'>"
