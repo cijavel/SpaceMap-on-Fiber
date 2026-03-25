@@ -30,11 +30,11 @@ static const int defaultSearchListSize = sizeof(defaultSearchList) / sizeof(defa
 void DataSpaceList::ensureLoaded() {
     if (_loaded) return;
 
-    std::unique_ptr<uint8_t[]> led     (new uint8_t[SPACEMAP_LED_MAX]);
-    std::unique_ptr<String[]>  name    (new String[SPACEMAP_LED_MAX]);
-    std::unique_ptr<String[]>  city    (new String[SPACEMAP_LED_MAX]);
-    std::unique_ptr<bool[]>    disabled(new bool[SPACEMAP_LED_MAX]());
-    int count = AppConfig::getInstance().loadSpaceMap(led.get(), name.get(), city.get(), disabled.get(), SPACEMAP_LED_MAX);
+    std::unique_ptr<uint8_t[]> led     (new uint8_t[LED_SLOT_COUNT]);
+    std::unique_ptr<String[]>  name    (new String[LED_SLOT_COUNT]);
+    std::unique_ptr<String[]>  city    (new String[LED_SLOT_COUNT]);
+    std::unique_ptr<bool[]>    disabled(new bool[LED_SLOT_COUNT]());
+    int count = AppConfig::getInstance().loadSpaceMap(led.get(), name.get(), city.get(), disabled.get(), LED_SLOT_COUNT);
 
     if (count > 0) {
         _list.clear();
@@ -50,10 +50,10 @@ void DataSpaceList::ensureLoaded() {
             _list.push_back(defaultSearchList[i]);
         }
         _loaded = true;
-        std::unique_ptr<uint8_t[]> dLed     (new uint8_t[SPACEMAP_LED_MAX]);
-        std::unique_ptr<String[]>  dName    (new String[SPACEMAP_LED_MAX]);
-        std::unique_ptr<String[]>  dCity    (new String[SPACEMAP_LED_MAX]);
-        std::unique_ptr<bool[]>    dDisabled(new bool[SPACEMAP_LED_MAX]());
+        std::unique_ptr<uint8_t[]> dLed     (new uint8_t[LED_SLOT_COUNT]);
+        std::unique_ptr<String[]>  dName    (new String[LED_SLOT_COUNT]);
+        std::unique_ptr<String[]>  dCity    (new String[LED_SLOT_COUNT]);
+        std::unique_ptr<bool[]>    dDisabled(new bool[LED_SLOT_COUNT]());
         for (int i = 0; i < defaultSearchListSize; i++) {
             dLed[i]      = (uint8_t)_list[i].getLED();
             dName[i]     = _list[i].getName();
@@ -98,7 +98,7 @@ void DataSpaceList::saveList(const std::vector<SpaceSearchList>& list) {
     _list = list;
     _loaded = true;
     int count = (int)list.size();
-    if (count > SPACEMAP_LED_MAX) count = SPACEMAP_LED_MAX;
+    if (count > LED_SLOT_COUNT) count = LED_SLOT_COUNT;
     std::unique_ptr<uint8_t[]> led     (new uint8_t[count]);
     std::unique_ptr<String[]>  name    (new String[count]);
     std::unique_ptr<String[]>  city    (new String[count]);

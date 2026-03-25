@@ -26,7 +26,7 @@ public:
 
     // Run a startup sequence that cycles each LED through all status colors.
     // totalMs is the total duration of the entire sequence in milliseconds;
-    // it is divided evenly across all LED_COUNT LEDs.
+    // it is divided evenly across all LED_SLOT_COUNT LEDs.
     void enumerateLEDs(int totalMs);
 
     // Update the strip to reflect the current open/closed status of each tracked space.
@@ -48,7 +48,7 @@ private:
 
     // Disabled-LED lookup table, rebuilt once per updateLEDsUnsafe() call.
     // Avoids a heap allocation on every LED refresh cycle.
-    bool _disabledByLed[LED_COUNT];
+    bool _disabledByLed[LED_SLOT_COUNT];
 
     // ----- Internal helpers (called with _stripMutex already held) -----
 
@@ -56,7 +56,7 @@ private:
     // Returns false if any LED index is out of range (strip is left unchanged).
     bool updateLEDsUnsafe(std::vector<SpaceStatusList>& spaceStatusList);
 
-    // Returns false (and prints a warning) if any LED index in the list is >= LED_COUNT.
+    // Returns false (and prints a warning) if any LED index in the list is >= LED_SLOT_COUNT.
     bool validateLEDIndices(const std::vector<SpaceStatusList>& spaceStatusList);
 
     // Scales a color to the given brightness level (0-255).

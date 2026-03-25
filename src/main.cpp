@@ -70,7 +70,7 @@ void setup() {
 
     // Load runtime configuration from NVS (defaults from Configuration.h).
     AppConfig::getInstance().load();
-    spaceStatusList.reserve(LED_COUNT);
+    spaceStatusList.reserve(LED_SLOT_COUNT);
 
     WiFiHandler::initWifi();
     TimeHandler::initTime();

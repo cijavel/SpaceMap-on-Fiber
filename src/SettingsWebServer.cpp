@@ -845,20 +845,20 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "<button type='submit' class='btn btn-reset'>&#8635; Reset to default</button>"
              "</form>");
 
-    // Inject LED_COUNT so JS knows how many rows to expect, then load the mapping
+    // Inject LED_SLOT_COUNT so JS knows how many rows to expect, then load the mapping
     // asynchronously from /api/spacemap to keep the initial HTML small.
-    s->print("<script>var LED_COUNT = ");
-    s->print(LED_COUNT);
+    s->print("<script>var LED_SLOT_COUNT = ");
+    s->print(LED_SLOT_COUNT);
     s->print("; var rowCount = 0;</script>"
              "<script>"
              "fetch('/api/spacemap').then(function(r){return r.json();}).then(function(entries){"
              "var tbody=document.getElementById('mapBody');"
              "var html='';"
-             "for(var i=0;i<LED_COUNT;i++){"
+             "for(var i=0;i<LED_SLOT_COUNT;i++){"
              "var e=entries[i]||{led:i,name:'',city:'',disabled:false};"
              "html+=buildRow(i,e.name,e.city,e.disabled);}"
              "tbody.innerHTML=html;"
-             "rowCount=LED_COUNT;"
+             "rowCount=LED_SLOT_COUNT;"
              "updateSpaceStatus();"
              "}).catch(function(){document.getElementById('mapBody').innerHTML="
              "'<tr><td colspan=5 style=color:#e74c3c>&#9888; Failed to load mapping from /api/spacemap</td></tr>';});"
@@ -888,8 +888,8 @@ void SettingsWebServer::handleSpaceMapGet(AsyncWebServerRequest* request) {
 // --------------------------------------------------------------------------
 void SettingsWebServer::handleSpaceMapPost(AsyncWebServerRequest* request) {
     std::vector<SpaceSearchList> newList;
-    // Always iterate exactly LED_COUNT slots — empty entries are stored as empty strings.
-    for (int idx = 0; idx < LED_COUNT; idx++) {
+    // Always iterate exactly LED_SLOT_COUNT slots — empty entries are stored as empty strings.
+    for (int idx = 0; idx < LED_SLOT_COUNT; idx++) {
         String ledKey  = "led_"  + String(idx);
         String nameKey = "name_" + String(idx);
         String cityKey = "city_" + String(idx);
@@ -914,7 +914,7 @@ void SettingsWebServer::handleSpaceMapPost(AsyncWebServerRequest* request) {
     Serial.println("WEB: SpaceMap saved via web interface");
 #endif
     // 303 redirect — avoids re-rendering the full page in the POST handler,
-    // which would overflow the async task stack with LED_COUNT entries.
+    // which would overflow the async task stack with LED_SLOT_COUNT entries.
     AsyncWebServerResponse* resp = request->beginResponse(303);
     resp->addHeader("Location", "/spacemap?msg=saved");
     request->send(resp);
@@ -942,7 +942,7 @@ void SettingsWebServer::handleSpaceMapBlink(AsyncWebServerRequest* request) {
         return;
     }
     int ledIndex = request->getParam("led")->value().toInt();
-    if (ledIndex < 0 || ledIndex >= LED_COUNT) {
+    if (ledIndex < 0 || ledIndex >= LED_SLOT_COUNT) {
         request->send(400, "application/json", "{\"ok\":false,\"error\":\"led index out of range\"}");
         return;
     }
@@ -968,14 +968,14 @@ void SettingsWebServer::handleSpaceMapBlink(AsyncWebServerRequest* request) {
 void SettingsWebServer::handleApiSpaceMapGet(AsyncWebServerRequest* request) {
     const auto& list = DataSpaceList::getInstance().getList();
 
-    std::vector<const SpaceSearchList*> byLed(LED_COUNT, nullptr);
+    std::vector<const SpaceSearchList*> byLed(LED_SLOT_COUNT, nullptr);
     for (const auto& e : list) {
-        if (e.getLED() < LED_COUNT) byLed[e.getLED()] = &e;
+        if (e.getLED() < LED_SLOT_COUNT) byLed[e.getLED()] = &e;
     }
 
     AsyncResponseStream* s = request->beginResponseStream("application/json");
     s->print("[");
-    for (int i = 0; i < LED_COUNT; i++) {
+    for (int i = 0; i < LED_SLOT_COUNT; i++) {
         if (i > 0) s->print(",");
         const SpaceSearchList* e = byLed[i];
         s->print("{\"led\":");
@@ -998,16 +998,16 @@ void SettingsWebServer::handleApiSpaceMapGet(AsyncWebServerRequest* request) {
 void SettingsWebServer::handleSpaceMapExport(AsyncWebServerRequest* request) {
     const auto& list = DataSpaceList::getInstance().getList();
 
-    // Build a lookup by LED index so we can iterate all LED_COUNT slots in order.
-    std::vector<SpaceSearchList const*> byLed(LED_COUNT, nullptr);
+    // Build a lookup by LED index so we can iterate all LED_SLOT_COUNT slots in order.
+    std::vector<SpaceSearchList const*> byLed(LED_SLOT_COUNT, nullptr);
     for (const auto& e : list) {
-        if (e.getLED() < LED_COUNT) byLed[e.getLED()] = &e;
+        if (e.getLED() < LED_SLOT_COUNT) byLed[e.getLED()] = &e;
     }
 
     AsyncResponseStream* s = request->beginResponseStream("application/octet-stream");
     s->addHeader("Content-Disposition", "attachment; filename=\"searchList.txt\"");
     s->addHeader("Content-Transfer-Encoding", "binary");
-    for (int i = 0; i < LED_COUNT; i++) {
+    for (int i = 0; i < LED_SLOT_COUNT; i++) {
         if (i > 0) s->print(", ");
         if (byLed[i]) {
             s->print("{ ");

@@ -3,7 +3,7 @@
 #include "AppConfig.h"
 #include "DataSpaceList.h"
 
-NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(LED_COUNT, LED_DATA_PIN);
+NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(LED_SLOT_COUNT, LED_DATA_PIN);
 
 // --------------------------------------------------------------------------
 // Base color definitions for each hackerspace status.
@@ -53,7 +53,7 @@ bool NeoPixelLED::updateLEDsUnsafe(std::vector<SpaceStatusList>& spaceStatusList
     memset(_disabledByLed, 0, sizeof(_disabledByLed));
     const auto& mapping = DataSpaceList::getInstance().getList();
     for (const auto& m : mapping) {
-        if (m.getLED() < LED_COUNT) _disabledByLed[m.getLED()] = m.isDisabled();
+        if (m.getLED() < LED_SLOT_COUNT) _disabledByLed[m.getLED()] = m.isDisabled();
     }
 
     for (const auto& entry : spaceStatusList) {
@@ -116,9 +116,9 @@ void NeoPixelLED::enumerateLEDs(int totalMs) {
 
     uint8_t brightness = AppConfig::getInstance().getLedBrightness();
     // Divide total duration evenly across all LEDs; minimum 1 ms per LED.
-    int perLed = max(1, totalMs / LED_COUNT);
+    int perLed = max(1, totalMs / LED_SLOT_COUNT);
 
-    for (int i = 0; i < LED_COUNT; i++) {
+    for (int i = 0; i < LED_SLOT_COUNT; i++) {
         strip.ClearTo(colorOff);
         strip.Show();
         delay(perLed / 4);
@@ -146,19 +146,19 @@ RgbColor NeoPixelLED::scaleBrightness(RgbColor color, int brightness) {
 
 // --------------------------------------------------------------------------
 // Check that all LED indices are within the physical strip bounds.
-// Returns false and logs an error if any index is >= LED_COUNT.
+// Returns false and logs an error if any index is >= LED_SLOT_COUNT.
 // --------------------------------------------------------------------------
 bool NeoPixelLED::validateLEDIndices(const std::vector<SpaceStatusList>& spaceStatusList) {
     for (const auto& entry : spaceStatusList) {
-        if (entry.getLED() >= LED_COUNT) {
+        if (entry.getLED() >= LED_SLOT_COUNT) {
             Serial.println("------------------------------");
             Serial.println("ERROR: LED index out of range!");
             Serial.print("Space: ");
             Serial.println(entry.getName());
             Serial.print("LED index: ");
             Serial.print(entry.getLED());
-            Serial.print(" / LED_COUNT: ");
-            Serial.println(LED_COUNT);
+            Serial.print(" / LED_SLOT_COUNT: ");
+            Serial.println(LED_SLOT_COUNT);
             Serial.println("------------------------------");
             return false;
         }

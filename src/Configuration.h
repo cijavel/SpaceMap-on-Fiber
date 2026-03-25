@@ -29,16 +29,14 @@
 #define DeviceName "SpaceMap on Fiber 2026"
 
 // LED strip configuration.
+// LED_SLOT_COUNT defines both the number of physical LEDs on the strip
+// and the number of LED<->Hackerspace mapping slots.
+#define LED_SLOT_COUNT 50
 #define LED_BRIGHTNESS 255
 #define ONBOARD_BRIGHTNESS 10
-#define LED_COUNT 50
 #define LED_DATA_PIN 14
 
 // Safety cap on total LED strip current draw in milliamps.
 #define LED_MAX_POWER_MILLIAMPS 500
 #define LED_TYPE WS2812
 #define LED_COLOR_ORDER RGB
-
-// Maximum number of LED<->Hackerspace mapping slots.
-// Tied to LED_COUNT so the mapping always covers the full physical strip.
-#define SPACEMAP_LED_MAX LED_COUNT
