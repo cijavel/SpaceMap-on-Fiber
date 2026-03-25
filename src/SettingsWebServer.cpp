@@ -62,6 +62,7 @@ function buildRow(i, name, city, disabled) {
         + '<td style="padding:4px;text-align:center;color:#555;font-size:0.9em;min-width:36px"><input type="hidden" name="led_'+i+'" value="'+i+'">'+i+'</td>'
         + '<td style="padding:4px"><input type="text" name="name_'+i+'" value="'+name+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
         + '<td style="padding:4px"><input type="text" name="city_'+i+'" value="'+city+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
+        + '<td style="padding:4px;text-align:center"><button type="button" onclick="clearRow(this)" style="background:#3a1a1a;color:#e74c3c;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="Eintrag leeren">&#10005;</button></td>'
         + '</tr>';
 }
 
@@ -91,6 +92,17 @@ function applyDisabledStyle(row) {
     if (!isDisabled && !empty) {
         row.style.opacity = '';
     }
+}
+
+function clearRow(btn) {
+    var row = btn.closest('tr');
+    var textInputs = row.querySelectorAll('input[type=text]');
+    var disCb = row.querySelector('.dis-check');
+    if (textInputs.length >= 2) { textInputs[0].value = ''; textInputs[1].value = ''; }
+    if (disCb) disCb.checked = false;
+    applyDisabledStyle(row);
+    row.style.opacity = '0.45';
+    markRowDirty(row);
 }
 
 function markRowDirty(row) {
@@ -793,6 +805,7 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "<th style='text-align:center;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a;width:40px' title='LED-Index (0 = erste LED)'>LED#</th>"
              "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a' title='Name exakt wie in der SpaceAPI'>Space Name</th>"
              "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a' title='Stadt (optional, nur zur Anzeige)'>City</th>"
+             "<th style='padding:6px;border-bottom:1px solid #3a3a3a;width:32px'></th>"
              "</tr></thead>"
              "<tbody id='mapBody'>");
 
@@ -862,7 +875,7 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "rowCount=LED_SLOT_COUNT;"
              "updateSpaceStatus();"
              "}).catch(function(){document.getElementById('mapBody').innerHTML="
-             "'<tr><td colspan=7 style=color:#e74c3c>&#9888; Failed to load mapping from /api/spacemap</td></tr>';});"
+             "'<tr><td colspan=8 style=color:#e74c3c>&#9888; Failed to load mapping from /api/spacemap</td></tr>';});"
              "</script>");
     s->print(FPSTR(SPACEMAP_JS));
 
