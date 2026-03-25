@@ -26,7 +26,7 @@ struct SpaceSearchList {
         return this->ledIndex;
     }
 
-    String getName() const {
+    const String& getName() const {
         return this->name;
     }
 
@@ -57,7 +57,7 @@ struct SpaceStatusList {
         return this->ledIndex;
     }
 
-    String getName() const {
+    const String& getName() const {
         return this->name;
     }
 
@@ -69,7 +69,7 @@ struct SpaceStatusList {
         this->status = status;
     }
 
-    String getlastChange() const {
+    const String& getlastChange() const {
         return this->lastChange;
     }
 
