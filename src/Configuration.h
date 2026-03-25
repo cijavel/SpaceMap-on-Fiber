@@ -38,3 +38,7 @@
 #define LED_MAX_POWER_MILLIAMPS 500
 #define LED_TYPE WS2812
 #define LED_COLOR_ORDER RGB
+
+// Maximum number of LED<->Hackerspace mapping slots.
+// Tied to LED_COUNT so the mapping always covers the full physical strip.
+#define SPACEMAP_LED_MAX LED_COUNT

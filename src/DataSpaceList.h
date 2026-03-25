@@ -2,12 +2,10 @@
 #define SPACE_API_ON_FIBER_DATASPACELIST_H
 
 #include <Arduino.h>
+#include "Configuration.h"
 #include "DataStructure.h"
 #include <ArduinoJson.h>
 #include <vector>
-
-// Maximum number of LED<->Hackerspace mappings supported at runtime.
-#define SPACEMAP_MAX_ENTRIES 64
 
 // Provides access to the list of tracked hackerspaces.
 // On first use the list is loaded from NVS; if none is stored the built-in

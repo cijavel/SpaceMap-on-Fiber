@@ -1,5 +1,6 @@
 #include "DataSpaceList.h"
 #include "AppConfig.h"
+#include <memory>
 
 // --------------------------------------------------------------------------
 // Built-in default list of hackerspaces.
@@ -29,11 +30,11 @@ static const int defaultSearchListSize = sizeof(defaultSearchList) / sizeof(defa
 void DataSpaceList::ensureLoaded() {
     if (_loaded) return;
 
-    uint8_t led[SPACEMAP_MAX_ENTRIES];
-    String  name[SPACEMAP_MAX_ENTRIES];
-    String  city[SPACEMAP_MAX_ENTRIES];
-    bool    disabled[SPACEMAP_MAX_ENTRIES];
-    int count = AppConfig::getInstance().loadSpaceMap(led, name, city, disabled, SPACEMAP_MAX_ENTRIES);
+    std::unique_ptr<uint8_t[]> led     (new uint8_t[SPACEMAP_LED_MAX]);
+    std::unique_ptr<String[]>  name    (new String[SPACEMAP_LED_MAX]);
+    std::unique_ptr<String[]>  city    (new String[SPACEMAP_LED_MAX]);
+    std::unique_ptr<bool[]>    disabled(new bool[SPACEMAP_LED_MAX]());
+    int count = AppConfig::getInstance().loadSpaceMap(led.get(), name.get(), city.get(), disabled.get(), SPACEMAP_LED_MAX);
 
     if (count > 0) {
         _list.clear();
@@ -49,17 +50,17 @@ void DataSpaceList::ensureLoaded() {
             _list.push_back(defaultSearchList[i]);
         }
         _loaded = true;
-        uint8_t dLed[SPACEMAP_MAX_ENTRIES];
-        String  dName[SPACEMAP_MAX_ENTRIES];
-        String  dCity[SPACEMAP_MAX_ENTRIES];
-        bool    dDisabled[SPACEMAP_MAX_ENTRIES];
+        std::unique_ptr<uint8_t[]> dLed     (new uint8_t[SPACEMAP_LED_MAX]);
+        std::unique_ptr<String[]>  dName    (new String[SPACEMAP_LED_MAX]);
+        std::unique_ptr<String[]>  dCity    (new String[SPACEMAP_LED_MAX]);
+        std::unique_ptr<bool[]>    dDisabled(new bool[SPACEMAP_LED_MAX]());
         for (int i = 0; i < defaultSearchListSize; i++) {
             dLed[i]      = (uint8_t)_list[i].getLED();
             dName[i]     = _list[i].getName();
             dCity[i]     = _list[i].city;
             dDisabled[i] = _list[i].disabled;
         }
-        AppConfig::getInstance().saveSpaceMap(dLed, dName, dCity, dDisabled, defaultSearchListSize);
+        AppConfig::getInstance().saveSpaceMap(dLed.get(), dName.get(), dCity.get(), dDisabled.get(), defaultSearchListSize);
     }
 }
 
@@ -96,19 +97,19 @@ const std::vector<SpaceSearchList>& DataSpaceList::getList() {
 void DataSpaceList::saveList(const std::vector<SpaceSearchList>& list) {
     _list = list;
     _loaded = true;
-    uint8_t led[SPACEMAP_MAX_ENTRIES];
-    String  name[SPACEMAP_MAX_ENTRIES];
-    String  city[SPACEMAP_MAX_ENTRIES];
-    bool    disabled[SPACEMAP_MAX_ENTRIES];
     int count = (int)list.size();
-    if (count > SPACEMAP_MAX_ENTRIES) count = SPACEMAP_MAX_ENTRIES;
+    if (count > SPACEMAP_LED_MAX) count = SPACEMAP_LED_MAX;
+    std::unique_ptr<uint8_t[]> led     (new uint8_t[count]);
+    std::unique_ptr<String[]>  name    (new String[count]);
+    std::unique_ptr<String[]>  city    (new String[count]);
+    std::unique_ptr<bool[]>    disabled(new bool[count]());
     for (int i = 0; i < count; i++) {
         led[i]      = (uint8_t)list[i].getLED();
         name[i]     = list[i].getName();
         city[i]     = list[i].city;
         disabled[i] = list[i].disabled;
     }
-    AppConfig::getInstance().saveSpaceMap(led, name, city, disabled, count);
+    AppConfig::getInstance().saveSpaceMap(led.get(), name.get(), city.get(), disabled.get(), count);
 }
 
 void DataSpaceList::resetToDefault() {
@@ -121,16 +122,16 @@ void DataSpaceList::resetToDefault() {
     // Clear NVS first so stale keys from a previously longer list cannot
     // survive, then write the defaults in a fresh open/close cycle.
     AppConfig::getInstance().resetSpaceMap();
-    uint8_t led[SPACEMAP_MAX_ENTRIES];
-    String  name[SPACEMAP_MAX_ENTRIES];
-    String  city[SPACEMAP_MAX_ENTRIES];
-    bool    disabled[SPACEMAP_MAX_ENTRIES];
     int count = (int)_list.size();
+    std::unique_ptr<uint8_t[]> led     (new uint8_t[count]);
+    std::unique_ptr<String[]>  name    (new String[count]);
+    std::unique_ptr<String[]>  city    (new String[count]);
+    std::unique_ptr<bool[]>    disabled(new bool[count]());
     for (int i = 0; i < count; i++) {
         led[i]      = (uint8_t)_list[i].getLED();
         name[i]     = _list[i].getName();
         city[i]     = _list[i].city;
         disabled[i] = _list[i].disabled;
     }
-    AppConfig::getInstance().saveSpaceMap(led, name, city, disabled, count);
+    AppConfig::getInstance().saveSpaceMap(led.get(), name.get(), city.get(), disabled.get(), count);
 }
