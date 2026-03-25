@@ -49,16 +49,16 @@ bool NeoPixelLED::updateLEDsUnsafe(std::vector<SpaceStatusList>& spaceStatusList
 
     uint8_t brightness = AppConfig::getInstance().getLedBrightness();
 
+    // Build disabled lookup once — O(n) instead of O(n²) per entry.
+    const auto& mapping = DataSpaceList::getInstance().getList();
+    std::vector<bool> disabledByLed(LED_COUNT, false);
+    for (const auto& m : mapping) {
+        if (m.getLED() < LED_COUNT) disabledByLed[m.getLED()] = m.isDisabled();
+    }
+
     for (const auto& entry : spaceStatusList) {
         RgbColor color;
-        // Check if the LED is disabled in the mapping — if so, keep it off
-        // regardless of the actual space status.
-        bool isDisabled = false;
-        const auto& mapping = DataSpaceList::getInstance().getList();
-        for (const auto& m : mapping) {
-            if (m.getLED() == entry.getLED()) { isDisabled = m.isDisabled(); break; }
-        }
-        if (isDisabled) {
+        if (disabledByLed[entry.getLED()]) {
             color = colorOff;
         } else {
             switch (entry.getStatus()) {
@@ -111,19 +111,21 @@ void NeoPixelLED::blinkLED(uint8_t ledIndex, std::vector<SpaceStatusList>& space
 // Called from setup() before the FreeRTOS scheduler hands off to loop(),
 // so no mutex needed here — but we take it anyway for correctness.
 // --------------------------------------------------------------------------
-void NeoPixelLED::enumerateLEDs(int delayMs) {
+void NeoPixelLED::enumerateLEDs(int totalMs) {
     if (xSemaphoreTake(_stripMutex, portMAX_DELAY) != pdTRUE) return;
 
     uint8_t brightness = AppConfig::getInstance().getLedBrightness();
+    // Divide total duration evenly across all LEDs; minimum 1 ms per LED.
+    int perLed = max(1, totalMs / LED_COUNT);
 
     for (int i = 0; i < LED_COUNT; i++) {
         strip.ClearTo(colorOff);
         strip.Show();
-        delay(delayMs / 4);
+        delay(perLed / 4);
 
-        strip.SetPixelColor(i, scaleBrightness(colorOpen,    brightness)); strip.Show(); delay(delayMs / 4);
-        strip.SetPixelColor(i, scaleBrightness(colorClosed,  brightness)); strip.Show(); delay(delayMs / 4);
-        strip.SetPixelColor(i, scaleBrightness(colorUnknown, brightness)); strip.Show(); delay(delayMs / 4);
+        strip.SetPixelColor(i, scaleBrightness(colorOpen,    brightness)); strip.Show(); delay(perLed / 4);
+        strip.SetPixelColor(i, scaleBrightness(colorClosed,  brightness)); strip.Show(); delay(perLed / 4);
+        strip.SetPixelColor(i, scaleBrightness(colorUnknown, brightness)); strip.Show(); delay(perLed / 4);
     }
     strip.ClearTo(colorOff);
     strip.Show();

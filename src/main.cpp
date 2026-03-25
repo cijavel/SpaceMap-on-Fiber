@@ -79,7 +79,7 @@ void setup() {
 
     NeoPixelLED &neoLED = NeoPixelLED::getInstance();
     neoLED.initLEDs();
-    neoLED.enumerateLEDs(500);
+    neoLED.enumerateLEDs(5000);
 
     // Fetch space status once immediately so the web UI shows data from the
     // very first page load instead of waiting for the first 120-second poll.

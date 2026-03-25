@@ -25,8 +25,9 @@ public:
     void initLEDs();
 
     // Run a startup sequence that cycles each LED through all status colors.
-    // delayMs controls the total time spent per LED in milliseconds.
-    void enumerateLEDs(int delayMs);
+    // totalMs is the total duration of the entire sequence in milliseconds;
+    // it is divided evenly across all LED_COUNT LEDs.
+    void enumerateLEDs(int totalMs);
 
     // Update the strip to reflect the current open/closed status of each tracked space.
     void updateLEDs(std::vector<SpaceStatusList>& spaceStatusList);
