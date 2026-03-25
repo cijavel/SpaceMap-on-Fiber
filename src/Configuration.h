@@ -31,7 +31,7 @@
 // LED strip configuration.
 // LED_SLOT_COUNT defines both the number of physical LEDs on the strip
 // and the number of LED<->Hackerspace mapping slots.
-#define LED_SLOT_COUNT 50
+#define LED_SLOT_COUNT 60
 #define LED_BRIGHTNESS 255
 #define ONBOARD_BRIGHTNESS 10
 #define LED_DATA_PIN 14
