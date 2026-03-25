@@ -46,6 +46,7 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
     // Empty entries (no name configured) are excluded from matching and
     // must never appear as "not found" in the status report.
     const auto& watchList = spaceDirectory.getList();
+    _lastUnmatchedNames.reserve(watchList.size());
     std::vector<bool> matchedFlags(watchList.size(), false);
 
     int activeWatchCount = 0;
