@@ -38,13 +38,17 @@ public:
     void blinkLED(uint8_t ledIndex, std::vector<SpaceStatusList>& spaceStatusList);
 
 private:
-    NeoPixelLED() : _stripMutex(nullptr) {}
+    NeoPixelLED() : _stripMutex(nullptr) { memset(_disabledByLed, 0, sizeof(_disabledByLed)); }
     NeoPixelLED(NeoPixelLED const&) = delete;
     void operator=(NeoPixelLED const&) = delete;
 
     // Mutex that must be held for every read/write access to the strip object.
     // Created once in initLEDs(). Never deleted (singleton lifetime).
     SemaphoreHandle_t _stripMutex;
+
+    // Disabled-LED lookup table, rebuilt once per updateLEDsUnsafe() call.
+    // Avoids a heap allocation on every LED refresh cycle.
+    bool _disabledByLed[LED_COUNT];
 
     // ----- Internal helpers (called with _stripMutex already held) -----
 

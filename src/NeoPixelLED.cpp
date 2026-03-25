@@ -49,16 +49,16 @@ bool NeoPixelLED::updateLEDsUnsafe(std::vector<SpaceStatusList>& spaceStatusList
 
     uint8_t brightness = AppConfig::getInstance().getLedBrightness();
 
-    // Build disabled lookup once — O(n) instead of O(n²) per entry.
+    // Rebuild disabled lookup from the current mapping — O(n), no heap allocation.
+    memset(_disabledByLed, 0, sizeof(_disabledByLed));
     const auto& mapping = DataSpaceList::getInstance().getList();
-    std::vector<bool> disabledByLed(LED_COUNT, false);
     for (const auto& m : mapping) {
-        if (m.getLED() < LED_COUNT) disabledByLed[m.getLED()] = m.isDisabled();
+        if (m.getLED() < LED_COUNT) _disabledByLed[m.getLED()] = m.isDisabled();
     }
 
     for (const auto& entry : spaceStatusList) {
         RgbColor color;
-        if (disabledByLed[entry.getLED()]) {
+        if (_disabledByLed[entry.getLED()]) {
             color = colorOff;
         } else {
             switch (entry.getStatus()) {
