@@ -56,7 +56,9 @@ function buildRow(i, name, city, disabled) {
     if (disabled) rowStyle += 'font-style:italic;';
     return '<tr id="row_'+i+'" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragend="onDragEnd(event)" style="cursor:grab;'+rowStyle+'">'
         + '<td style="padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
-        + '<td style="padding:4px;text-align:center;white-space:nowrap"><input type="checkbox" class="dis-check" name="dis_'+i+'" title="Deaktivieren (LED bleibt aus)" onchange="onDisabledChange(this)"'+(disabled?' checked':'')+'>  <button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;margin-left:4px;cursor:pointer" title="Blink to locate">&#128294;</button><span class="space-status" style="display:inline-block;min-width:80px;margin-left:6px;font-size:0.82em;vertical-align:middle;color:#888">&#8987; ...</span></td>'
+        + '<td style="padding:4px;text-align:center"><input type="checkbox" class="dis-check" name="dis_'+i+'" title="LED deaktivieren (bleibt aus)" onchange="onDisabledChange(this)"'+(disabled?' checked':'')+''+'></td>'
+        + '<td style="padding:4px;text-align:center"><button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="LED orten">&#128294;</button></td>'
+        + '<td style="padding:4px;text-align:center"><span class="space-status" style="display:inline-block;min-width:80px;font-size:0.82em;color:#888">&#8987; ...</span></td>'
         + '<td style="padding:4px;text-align:center;color:#555;font-size:0.9em;min-width:36px"><input type="hidden" name="led_'+i+'" value="'+i+'">'+i+'</td>'
         + '<td style="padding:4px"><input type="text" name="name_'+i+'" value="'+name+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
         + '<td style="padding:4px"><input type="text" name="city_'+i+'" value="'+city+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
@@ -181,7 +183,7 @@ function onDrop(e) {
         Array.from(tbody.querySelectorAll('tr')).forEach(function(r, idx) {
             // Update the hidden led input and the display label
             var ledHidden = r.querySelector('input[type=hidden]');
-            var ledDisplay = r.querySelector('td:nth-child(3)');
+            var ledDisplay = r.querySelector('td:nth-child(5)');
             if (ledHidden) ledHidden.value = idx;
             if (ledDisplay) {
                 // Update text node (last child is the text)
@@ -334,7 +336,7 @@ function reindexRows() {
         var ledHidden = r.querySelector('input[type=hidden]');
         if (ledHidden) { ledHidden.name = 'led_' + rowCount; ledHidden.value = rowCount; }
         // Update LED display label (text node inside 3rd td)
-        var ledTd = r.querySelector('td:nth-child(3)');
+        var ledTd = r.querySelector('td:nth-child(5)');
         if (ledTd) {
             var tn = ledTd.lastChild;
             if (tn && tn.nodeType === 3) tn.nodeValue = rowCount;
@@ -781,9 +783,9 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "<table id='mapTable' style='width:100%;border-collapse:collapse;margin-top:8px'>"
              "<thead><tr>"
              "<th style='padding:6px;border-bottom:1px solid #3a3a3a;width:24px' title='Zeile ziehen zum Umsortieren'></th>"
-             "<th style='padding:6px;border-bottom:1px solid #3a3a3a;text-align:center' title='Aus: LED deaktivieren | Blinken: LED orten | Status: API-Status'>"
-               "<span style='color:#888;font-size:0.8em'>Aus &middot; Blinken &middot; Status</span>"
-             "</th>"
+             "<th style='padding:6px;border-bottom:1px solid #3a3a3a;text-align:center;color:#1a7a3c' title='LED deaktivieren – bleibt aus unabh&auml;ngig vom Space-Status'>Aus</th>"
+             "<th style='padding:6px;border-bottom:1px solid #3a3a3a;text-align:center;color:#1a7a3c' title='LED kurz aufblinken lassen zum Orten'>Blinken</th>"
+             "<th style='padding:6px;border-bottom:1px solid #3a3a3a;text-align:center;color:#1a7a3c' title='Aktueller Space-Status aus der SpaceAPI'>Status</th>"
              "<th style='text-align:center;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a;width:40px' title='LED-Index (0 = erste LED)'>LED#</th>"
              "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a' title='Name exakt wie in der SpaceAPI'>Space Name</th>"
              "<th style='text-align:left;padding:6px;color:#1a7a3c;border-bottom:1px solid #3a3a3a' title='Stadt (optional, nur zur Anzeige)'>City</th>"
@@ -856,7 +858,7 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "rowCount=LED_SLOT_COUNT;"
              "updateSpaceStatus();"
              "}).catch(function(){document.getElementById('mapBody').innerHTML="
-             "'<tr><td colspan=5 style=color:#e74c3c>&#9888; Failed to load mapping from /api/spacemap</td></tr>';});"
+             "'<tr><td colspan=7 style=color:#e74c3c>&#9888; Failed to load mapping from /api/spacemap</td></tr>';});"
              "</script>");
     s->print(FPSTR(SPACEMAP_JS));
 
