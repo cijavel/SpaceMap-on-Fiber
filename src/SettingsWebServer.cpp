@@ -58,7 +58,7 @@ function buildRow(i, name, city, disabled) {
         + '<td style="padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
         + '<td style="padding:4px;text-align:center"><input type="checkbox" class="dis-check" name="dis_'+i+'" title="LED deaktivieren (bleibt aus)" onchange="onDisabledChange(this)"'+(disabled?' checked':'')+''+'></td>'
         + '<td style="padding:4px;text-align:center"><button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="LED orten">&#128294;</button></td>'
-        + '<td style="padding:4px;text-align:center"><span class="space-status" style="display:inline-block;min-width:80px;font-size:0.82em;color:#888">&#8987; ...</span></td>'
+        + '<td style="padding:4px;text-align:center"><span class="space-status" style="display:inline-block;min-width:80px;font-size:0.82em;color:#555">&#8212;</span></td>'
         + '<td style="padding:4px;text-align:center;color:#555;font-size:0.9em;min-width:36px"><input type="hidden" name="led_'+i+'" value="'+i+'">'+i+'</td>'
         + '<td style="padding:4px"><input type="text" name="name_'+i+'" value="'+name+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
         + '<td style="padding:4px"><input type="text" name="city_'+i+'" value="'+city+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
@@ -324,10 +324,10 @@ function updateSpaceStatus() {
             }
             span.title = '';
             var disCb = row.querySelector('.dis-check');
-            if (disCb && disCb.checked) { span.style.color = '#bbb'; return; }
-            if      (status === 'OPEN')    { span.style.color = '#2dbe60'; span.innerHTML = '&#9679; OPEN'; }
-            else if (status === 'CLOSED')  { span.style.color = '#e74c3c'; span.innerHTML = '&#9679; CLOSED'; }
-            else if (status === 'UNKNOWN') { span.style.color = '#4a90d9'; span.innerHTML = '&#9679; UNKNOWN'; }
+            var isDisabled = disCb && disCb.checked;
+            if      (status === 'OPEN')    { span.style.color = isDisabled ? '#bbb' : '#2dbe60'; span.innerHTML = '&#9679; OPEN'; }
+            else if (status === 'CLOSED')  { span.style.color = isDisabled ? '#bbb' : '#e74c3c'; span.innerHTML = '&#9679; CLOSED'; }
+            else if (status === 'UNKNOWN') { span.style.color = isDisabled ? '#bbb' : '#4a90d9'; span.innerHTML = '&#9679; UNKNOWN'; }
             else                           { span.style.color = '#555';    span.innerHTML = '&#8212;'; }
         });
     })
