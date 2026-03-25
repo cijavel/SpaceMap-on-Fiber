@@ -54,8 +54,8 @@ function buildRow(i, name, city, disabled) {
     var isEmpty = (name === '' && city === '');
     var rowStyle = isEmpty ? 'opacity:0.45;' : '';
     if (disabled) rowStyle += 'font-style:italic;';
-    return '<tr id="row_'+i+'" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragend="onDragEnd(event)" style="cursor:grab;'+rowStyle+'">'
-        + '<td style="padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
+    return '<tr id="row_'+i+'" ondragover="onDragOver(event)" ondrop="onDrop(event)" style="'+rowStyle+'">'
+        + '<td draggable="true" ondragstart="onDragStart(event)" ondragend="onDragEnd(event)" style="padding:4px;width:24px;color:#555;font-size:1.2em;text-align:center;cursor:grab" title="Drag to reorder">&#8597;</td>'
         + '<td style="padding:4px;text-align:center"><input type="checkbox" class="dis-check" name="dis_'+i+'" title="LED deaktivieren (bleibt aus)" onchange="onDisabledChange(this)"'+(disabled?' checked':'')+''+'></td>'
         + '<td style="padding:4px;text-align:center"><button type="button" class="btn-blink" onclick="blinkLed(this)" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="LED orten">&#128294;</button></td>'
         + '<td style="padding:4px;text-align:center"><span class="space-status" style="display:inline-block;min-width:80px;font-size:0.82em;color:#555">&#8212;</span></td>'
@@ -171,7 +171,7 @@ function doImport() {
 
 var dragSrc = null;
 function onDragStart(e) {
-    dragSrc = e.currentTarget;
+    dragSrc = e.currentTarget.closest('tr');
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', '');
     setTimeout(function() { dragSrc.style.opacity = '0.4'; }, 0);
@@ -210,7 +210,7 @@ function onDrop(e) {
     }
 }
 function onDragEnd(e) {
-    var row = e.currentTarget;
+    var row = e.currentTarget.closest('tr');
     var inputs = row.querySelectorAll('input[type=text]');
     var isEmpty = inputs.length >= 2 && inputs[0].value === '' && inputs[1].value === '';
     row.style.opacity = isEmpty ? '0.45' : '';
