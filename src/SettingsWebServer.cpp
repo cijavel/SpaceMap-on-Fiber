@@ -314,7 +314,7 @@ function updateSpaceStatus() {
             var led    = parseInt(ledHidden.value, 10);
             var nameInput = textInputs.length > 0 ? textInputs[0] : null;
             var name   = nameInput ? nameInput.value.toLowerCase().trim() : '';
-            var status = (byLed[led] !== undefined) ? byLed[led] : byName[name];
+            var status = name ? ((byLed[led] !== undefined) ? byLed[led] : byName[name]) : undefined;
             if (unmatchedSet[name]) {
                 row.style.background = '#2a1a00'; row.style.outline = '1px solid #f5a800';
                 span.style.color = '#f5a800'; span.title = 'Not found in last API response';
