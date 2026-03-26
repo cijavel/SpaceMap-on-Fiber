@@ -1,4 +1,4 @@
-#include "arduino.h"
+#include "Arduino.h"
 
 #ifndef SPACE_API_ON_DATASTRUCTURE_H
 #define SPACE_API_ON_DATASTRUCTURE_H
