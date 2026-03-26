@@ -110,7 +110,12 @@ function markRowDirty(row) {
     row.style.outline = '1px solid #1a7a3c';
     var msg = document.getElementById('saveMsg');
     if (msg) msg.style.display = 'none';
+    var bar = document.getElementById('unsavedBar');
+    if (bar) bar.style.display = 'flex';
 }
+
+function doSave()    { document.getElementById('mapForm').submit(); }
+function doDiscard() { location.reload(); }
 
 function doImport() {
     var raw = document.getElementById('importArea').value;
@@ -812,23 +817,26 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
     // tbody is populated by JS via fetch('/api/spacemap') — no rows rendered here.
     // This keeps the initial HTML response small and avoids heap pressure on the ESP32.
 
-    s->print("</tbody></table>"
-             "<div style='margin-top:12px;display:flex;align-items:center;flex-wrap:wrap;gap:10px'>"
-             "<button type='submit' class='btn btn-save' style='margin:0' id='saveBtn'>&#128190; Save</button>");
+    s->print("</tbody></table></form>");
 
     if (message.length() > 0) {
         bool isReset = message.indexOf("eset") >= 0;
         bool isError = message.indexOf("rror") >= 0;
         const char* color = isError ? "#f88" : "#6fcf6f";
         const char* bg    = isError ? "#2e0e0e" : (isReset ? "#2e1a00" : "#0e2e0e");
-        s->print("<span id='saveMsg' style='padding:6px 14px;border-radius:4px;font-weight:bold;background:");
+        s->print("<div id='saveMsg' style='margin-top:10px;padding:8px 14px;border-radius:4px;font-weight:bold;background:");
         s->print(bg); s->print(";color:"); s->print(color); s->print("'>");
         s->print(message);
-        s->print("</span>");
-    } else {
-        s->print("<span id='saveMsg' style='display:none'></span>");
+        s->print("</div>");
     }
-    s->print("</div></form>");
+
+    s->print("<div id='unsavedBar' style='display:none;position:fixed;bottom:0;left:0;right:0;"
+             "background:#111e11;border-top:2px solid #1a7a3c;padding:10px 24px;"
+             "z-index:999;align-items:center;gap:12px;box-shadow:0 -4px 16px #0008'>"
+             "<span style='color:#6fcf6f;flex:1;font-weight:bold'>&#9679; Unsaved changes</span>"
+             "<button type='button' onclick='doDiscard()' class='btn btn-reset' style='margin:0'>Discard</button>"
+             "<button type='button' onclick='doSave()' class='btn btn-save' style='margin:0'>&#128190; Save</button>"
+             "</div>");
 
     // --- Import ---
     s->print("<h2>Import</h2>"
