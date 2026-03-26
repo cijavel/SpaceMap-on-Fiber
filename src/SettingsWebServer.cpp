@@ -49,6 +49,53 @@ border-radius:4px;color:#6fcf6f;}
 static const char SPACEMAP_JS[] PROGMEM = R"rawjs(
 <script>
 var rowCount = 0; // set dynamically before this script runs
+var originalMapping = {}; // snapshot of saved state, keyed by LED index
+
+function initSnapshot() {
+    document.querySelectorAll('#mapBody tr').forEach(function(r, idx) {
+        var inputs = r.querySelectorAll('input[type=text]');
+        var disCb  = r.querySelector('.dis-check');
+        originalMapping[idx] = {
+            name:     inputs.length > 0 ? inputs[0].value : '',
+            city:     inputs.length > 1 ? inputs[1].value : '',
+            disabled: disCb ? disCb.checked : false
+        };
+    });
+}
+
+function updateRowDirtyState(row) {
+    var ledHidden = row.querySelector('input[type=hidden]');
+    var inputs    = row.querySelectorAll('input[type=text]');
+    var disCb     = row.querySelector('.dis-check');
+    var led       = ledHidden ? parseInt(ledHidden.value) : -1;
+    var orig      = originalMapping[led];
+    var name      = inputs.length > 0 ? inputs[0].value : '';
+    var city      = inputs.length > 1 ? inputs[1].value : '';
+    var disabled  = disCb ? disCb.checked : false;
+    var isDirty   = !orig || name !== orig.name || city !== orig.city || disabled !== orig.disabled;
+    if (isDirty) {
+        row.style.background = '#0d1f0d';
+        row.style.outline    = '1px solid #1a7a3c';
+    } else if (row.style.background === 'rgb(13, 31, 13)') {
+        row.style.background = '';
+        row.style.outline    = '';
+    }
+    var msg = document.getElementById('saveMsg');
+    if (msg) msg.style.display = 'none';
+    var anyDirty = Array.from(document.querySelectorAll('#mapBody tr')).some(function(r2) {
+        var lh = r2.querySelector('input[type=hidden]');
+        var ii = r2.querySelectorAll('input[type=text]');
+        var cb = r2.querySelector('.dis-check');
+        var l  = lh ? parseInt(lh.value) : -1;
+        var o  = originalMapping[l];
+        if (!o) return true;
+        return (ii.length > 0 ? ii[0].value : '') !== o.name
+            || (ii.length > 1 ? ii[1].value : '') !== o.city
+            || (cb ? cb.checked : false) !== o.disabled;
+    });
+    var bar = document.getElementById('unsavedBar');
+    if (bar) bar.style.display = anyDirty ? 'flex' : 'none';
+}
 
 function buildRow(i, name, city, disabled) {
     var isEmpty = (name === '' && city === '');
@@ -68,7 +115,7 @@ function buildRow(i, name, city, disabled) {
 
 function onNameOrCityInput(inp) {
     var row = inp.closest('tr');
-    markRowDirty(row);
+    updateRowDirtyState(row);
     var inputs = row.querySelectorAll('input[type=text]');
     var empty = inputs[0].value === '' && inputs[1].value === '';
     row.style.opacity = empty ? '0.45' : '';
@@ -76,7 +123,7 @@ function onNameOrCityInput(inp) {
 
 function onDisabledChange(cb) {
     var row = cb.closest('tr');
-    markRowDirty(row);
+    updateRowDirtyState(row);
     applyDisabledStyle(row);
 }
 
@@ -102,17 +149,9 @@ function clearRow(btn) {
     if (disCb) disCb.checked = false;
     applyDisabledStyle(row);
     row.style.opacity = '0.45';
-    markRowDirty(row);
+    updateRowDirtyState(row);
 }
 
-function markRowDirty(row) {
-    row.style.background = '#0d1f0d';
-    row.style.outline = '1px solid #1a7a3c';
-    var msg = document.getElementById('saveMsg');
-    if (msg) msg.style.display = 'none';
-    var bar = document.getElementById('unsavedBar');
-    if (bar) bar.style.display = 'flex';
-}
 
 function doSave()    { document.getElementById('mapForm').submit(); }
 function doDiscard() { location.reload(); }
@@ -150,7 +189,7 @@ function doImport() {
                 if (disCb) disCb.checked = p.disabled;
                 applyDisabledStyle(row);
                 row.style.opacity = (p.name === '' && p.city === '') ? '0.45' : row.style.opacity;
-                markRowDirty(row);
+                updateRowDirtyState(row);
             }
         }
     });
@@ -166,7 +205,7 @@ function doImport() {
                 inputs[1].value = p.city;
                 if (disCb) disCb.checked = p.disabled;
                 applyDisabledStyle(row);
-                markRowDirty(row);
+                updateRowDirtyState(row);
                 break;
             }
         }
@@ -203,14 +242,13 @@ function onDrop(e) {
             // Update the hidden led input and the display label
             var ledHidden = r.querySelector('input[type=hidden]');
             var ledDisplay = r.querySelector('td:nth-child(2)');
-            var oldLed = ledHidden ? parseInt(ledHidden.value) : idx;
             if (ledHidden) ledHidden.value = idx;
             if (ledDisplay) {
                 // Update text node (last child is the text)
                 var tn = ledDisplay.lastChild;
                 if (tn && tn.nodeType === 3) tn.nodeValue = idx;
             }
-            if (oldLed !== idx) markRowDirty(r);
+            updateRowDirtyState(r);
         });
         reindexRows();
     }
@@ -344,6 +382,8 @@ function updateSpaceStatus() {
     });
 }
 
+// Capture the saved state once so dirty-state comparisons have a baseline.
+initSnapshot();
 // Initial call — zeigt Daten sofort wenn vorhanden, startet sonst den 2s-Retry.
 updateSpaceStatus();
 // Reguläres Polling alle 15 s als Fallback und für laufende Aktualisierung.
