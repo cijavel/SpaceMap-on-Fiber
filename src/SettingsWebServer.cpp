@@ -203,13 +203,14 @@ function onDrop(e) {
             // Update the hidden led input and the display label
             var ledHidden = r.querySelector('input[type=hidden]');
             var ledDisplay = r.querySelector('td:nth-child(2)');
+            var oldLed = ledHidden ? parseInt(ledHidden.value) : idx;
             if (ledHidden) ledHidden.value = idx;
             if (ledDisplay) {
                 // Update text node (last child is the text)
                 var tn = ledDisplay.lastChild;
                 if (tn && tn.nodeType === 3) tn.nodeValue = idx;
             }
-            markRowDirty(r);
+            if (oldLed !== idx) markRowDirty(r);
         });
         reindexRows();
     }
