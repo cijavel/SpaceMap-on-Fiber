@@ -8,7 +8,7 @@
 // This list is used as the factory default when no custom mapping is stored.
 // --------------------------------------------------------------------------
 static const SpaceSearchList defaultSearchList[] = {
-    { 0, "OpenLab Augsburg e.V."                  , "Augsburg"},
+    { 0, "OpenLab Augsburg e.V."             , "Augsburg"},
     { 1, "IT-Syndikat"                       , "Innsbruck"},
     { 2, "muCCC"                             , "Munich"},
     { 3, "realraum"                          , "Graz"},
