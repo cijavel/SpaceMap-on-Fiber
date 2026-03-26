@@ -78,12 +78,12 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
     // Filter: pull only the fields we actually need to reduce memory pressure.
     // The SpaceAPI wraps all space data inside a "data" object:
     // [ { "url":"...", "valid":true, "data": { "space":"Name", "state":{"open":true} } }, ... ]
-    StaticJsonDocument<128> filter;
+    JsonDocument filter;
     filter["data"]["space"]         = true;
     filter["data"]["state"]["open"] = true;
 
-    // One parsed space object at a time – 4 KB is comfortable for a single entry.
-    DynamicJsonDocument spaceDoc(4096);
+    // One parsed space object at a time.
+    JsonDocument spaceDoc;
 
     if (!responseStream.find("[")) { // SpaceAPI root must be a JSON array.
         Serial.println(F("SpaceAPI: expected JSON array, got something else"));
