@@ -70,6 +70,7 @@ body.light #unsavedBar{background:#e8f5e9 !important;border-top-color:#1a7a3c !i
 box-shadow:0 -4px 16px #0002 !important;}
 body.light #barUnsavedLabel,body.light #barSavedMsg{color:#145c2d !important;}
 body.light #saveMsg{background:#d4edda !important;color:#155724 !important;}
+body.light .btn-clear{background:#fde8e8 !important;color:#c0392b !important;}
 body.light #apiStatus,body.light #parseStatus{background:#f0f0f0 !important;border-color:#ccc !important;}
 body.light #apiStatus small,body.light #parseStatus small{color:#555 !important;}
 )css";
@@ -180,7 +181,7 @@ function buildRow(i, name, city, disabled) {
         + '<td style="padding:4px;text-align:center"><span class="space-status" aria-live="polite" style="display:inline-block;min-width:80px;font-size:0.82em;color:#888">&#8212;</span></td>'
         + '<td style="padding:4px"><input type="text" name="name_'+i+'" value="'+name+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
         + '<td style="padding:4px"><input type="text" name="city_'+i+'" value="'+city+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
-        + '<td style="padding:4px;text-align:center"><button type="button" onclick="clearRow(this)" aria-label="Eintrag leeren" style="background:#3a1a1a;color:#e74c3c;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="Eintrag leeren">&#10005;</button></td>'
+        + '<td style="padding:4px;text-align:center"><button type="button" class="btn-clear" onclick="clearRow(this)" aria-label="Eintrag leeren" style="background:#3a1a1a;color:#e74c3c;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="Eintrag leeren">&#10005;</button></td>'
         + '</tr>';
 }
 
