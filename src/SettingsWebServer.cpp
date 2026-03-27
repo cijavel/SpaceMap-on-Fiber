@@ -19,9 +19,13 @@ extern std::vector<SpaceStatusList> spaceStatusList;
 // Shared CSS (injected by htmlHeader).
 static const char CSS[] PROGMEM = R"css(
 body{font-family:sans-serif;margin:0;background:#111;color:#eee;}
-nav{background:#1a1a1a;padding:10px 20px;border-bottom:2px solid #e02020;}
+nav{background:#1a1a1a;padding:10px 20px;border-bottom:2px solid #e02020;display:flex;align-items:center;}
 nav a{color:#2dbe60;text-decoration:none;margin-right:16px;font-weight:bold;}
 nav a:hover{color:#fff;text-decoration:underline;}
+.nav-links{display:flex;align-items:center;flex:1;}
+#themeToggle{margin-left:auto;background:none;border:1px solid #444;border-radius:6px;
+color:#eee;cursor:pointer;font-size:1.1em;padding:3px 10px;line-height:1.4;}
+#themeToggle:hover{border-color:#2dbe60;}
 .container{max-width:700px;margin:30px auto;padding:0 16px;}
 h1{color:#1a7a3c;}
 h2{color:#f5a800;}
@@ -43,13 +47,75 @@ font-size:1em;font-weight:bold;text-decoration:none;}
 .msg{margin-top:14px;padding:10px;background:#0e2e0e;border-left:4px solid #1a7a3c;
 border-radius:4px;color:#6fcf6f;}
 .msg-reset{background:#2e0e0e;border-left:4px solid #f5a800;color:#f88;}
+/* --- Light mode overrides --- */
+body.light{background:#f4f4f4;color:#111;}
+body.light nav{background:#e8e8e8;border-bottom-color:#c0392b;}
+body.light nav a{color:#1a7a3c;}
+body.light nav a:hover{color:#000;}
+body.light #themeToggle{border-color:#999;color:#111;}
+body.light #themeToggle:hover{border-color:#1a7a3c;}
+body.light h1{color:#145c2d;}
+body.light h2{color:#b07800;}
+body.light label{color:#444;}
+body.light input[type=text],body.light input[type=number],body.light input[type=url]
+{background:#fff !important;color:#111 !important;border-color:#bbb !important;}
+body.light input:focus{outline-color:#1a7a3c;border-color:#1a7a3c;}
+body.light .msg{background:#d4edda;color:#155724;}
+body.light .msg-reset{background:#fff3cd;color:#856404;}
+body.light #mapTable th{color:#145c2d !important;}
+body.light #mapTable td{color:#111 !important;}
+body.light #mapTable input[type=checkbox]{accent-color:#1a7a3c;}
+body.light .btn-blink{background:#2a6aaa !important;}
+body.light #unsavedBar{background:#e8f5e9 !important;border-top-color:#1a7a3c !important;
+box-shadow:0 -4px 16px #0002 !important;}
+body.light #barUnsavedLabel,body.light #barSavedMsg{color:#145c2d !important;}
+body.light #saveMsg{background:#d4edda !important;color:#155724 !important;}
+body.light #apiStatus,body.light #parseStatus{background:#f0f0f0 !important;border-color:#ccc !important;}
+body.light #apiStatus small,body.light #parseStatus small{color:#555 !important;}
 )css";
 
 // JavaScript for /spacemap — large block, lives in flash.
 static const char SPACEMAP_JS[] PROGMEM = R"rawjs(
 <script>
-var rowCount = 0; // set dynamically before this script runs
+var rowCount = 0;        // set dynamically before this script runs
 var originalMapping = {}; // snapshot of saved state, keyed by LED index
+var _savedTimer    = null;
+var _inSavedState  = false;
+
+function showSavedState() {
+    _inSavedState = true;
+    var bar          = document.getElementById('unsavedBar');
+    var savedMsg     = document.getElementById('barSavedMsg');
+    var unsavedLabel = document.getElementById('barUnsavedLabel');
+    var discardBtn   = document.getElementById('barDiscard');
+    var saveBtn      = document.getElementById('barSave');
+    if (savedMsg)     savedMsg.style.display     = '';
+    if (unsavedLabel) unsavedLabel.style.display  = 'none';
+    if (discardBtn)   discardBtn.style.display    = 'none';
+    if (saveBtn)      saveBtn.style.display       = 'none';
+    if (bar)          bar.style.display           = 'flex';
+    if (_savedTimer)  clearTimeout(_savedTimer);
+    _savedTimer = setTimeout(function() {
+        if (bar) bar.style.display = 'none';
+        _inSavedState = false;
+        _savedTimer   = null;
+    }, 5000);
+}
+
+function showUnsavedState() {
+    _inSavedState = false;
+    if (_savedTimer) { clearTimeout(_savedTimer); _savedTimer = null; }
+    var bar          = document.getElementById('unsavedBar');
+    var savedMsg     = document.getElementById('barSavedMsg');
+    var unsavedLabel = document.getElementById('barUnsavedLabel');
+    var discardBtn   = document.getElementById('barDiscard');
+    var saveBtn      = document.getElementById('barSave');
+    if (savedMsg)     savedMsg.style.display     = 'none';
+    if (unsavedLabel) unsavedLabel.style.display  = '';
+    if (discardBtn)   discardBtn.style.display    = '';
+    if (saveBtn)      saveBtn.style.display       = '';
+    if (bar)          bar.style.display           = 'flex';
+}
 
 function initSnapshot() {
     document.querySelectorAll('#mapBody tr').forEach(function(r, idx) {
@@ -73,10 +139,11 @@ function updateRowDirtyState(row) {
     var city      = inputs.length > 1 ? inputs[1].value : '';
     var disabled  = disCb ? disCb.checked : false;
     var isDirty   = !orig || name !== orig.name || city !== orig.city || disabled !== orig.disabled;
+    var isLight   = document.body.classList.contains('light');
     if (isDirty) {
-        row.style.background = '#0d1f0d';
+        row.style.background = isLight ? '#d4edda' : '#0d1f0d';
         row.style.outline    = '1px solid #1a7a3c';
-    } else if (row.style.background === 'rgb(13, 31, 13)') {
+    } else if (row.style.background === 'rgb(13, 31, 13)' || row.style.background === 'rgb(212, 237, 218)') {
         row.style.background = '';
         row.style.outline    = '';
     }
@@ -93,8 +160,12 @@ function updateRowDirtyState(row) {
             || (ii.length > 1 ? ii[1].value : '') !== o.city
             || (cb ? cb.checked : false) !== o.disabled;
     });
-    var bar = document.getElementById('unsavedBar');
-    if (bar) bar.style.display = anyDirty ? 'flex' : 'none';
+    if (anyDirty) {
+        showUnsavedState();
+    } else if (!_inSavedState) {
+        var bar = document.getElementById('unsavedBar');
+        if (bar) bar.style.display = 'none';
+    }
 }
 
 function buildRow(i, name, city, disabled) {
@@ -382,8 +453,6 @@ function updateSpaceStatus() {
     });
 }
 
-// Capture the saved state once so dirty-state comparisons have a baseline.
-initSnapshot();
 // Initial call — zeigt Daten sofort wenn vorhanden, startet sonst den 2s-Retry.
 updateSpaceStatus();
 // Reguläres Polling alle 15 s als Fallback und für laufende Aktualisierung.
@@ -726,7 +795,9 @@ String SettingsWebServer::htmlHeader(const String& title) {
     h += title;
     h += "</title><style>";
     h += FPSTR(CSS);   // read from PROGMEM, no DRAM copy retained
-    h += "</style></head><body>";
+    h += "</style></head>"
+         "<body>"
+         "<script>if(localStorage.getItem('theme')==='light')document.body.classList.add('light');</script>";
     return h;
 }
 
@@ -736,10 +807,26 @@ String SettingsWebServer::htmlFooter() {
 
 String SettingsWebServer::navBar() {
     return "<nav aria-label='Hauptnavigation'>"
+           "<div class='nav-links'>"
            "<a href='/'>&#127968; Overview</a>"
            "<a href='/settings'>&#9881; Settings</a>"
            "<a href='/spacemap'>&#128280; SpaceMap</a>"
-           "</nav><main><div class='container'>";
+           "</div>"
+           "<button id='themeToggle' onclick='toggleTheme()' title='Toggle light/dark mode'>"
+           "<span id='themeIcon'></span>"
+           "</button>"
+           "</nav>"
+           "<script>"
+           "function toggleTheme(){"
+             "var isLight=document.body.classList.toggle('light');"
+             "localStorage.setItem('theme',isLight?'light':'dark');"
+             "updateThemeIcon();}"
+           "function updateThemeIcon(){"
+             "var el=document.getElementById('themeIcon');"
+             "if(el)el.textContent=document.body.classList.contains('light')?'\\uD83C\\uDF19':'\\u2600\\uFE0F';}"
+           "updateThemeIcon();"
+           "</script>"
+           "<main><div class='container'>";
 }
 
 // --------------------------------------------------------------------------
@@ -860,7 +947,8 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
 
     s->print("</tbody></table></form>");
 
-    if (message.length() > 0) {
+    bool isSaved = (message == "Mapping saved.");
+    if (message.length() > 0 && !isSaved) {
         bool isReset = message.indexOf("eset") >= 0;
         bool isError = message.indexOf("rror") >= 0;
         const char* color = isError ? "#f88" : "#6fcf6f";
@@ -870,13 +958,15 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
         s->print(message);
         s->print("</div>");
     }
+    if (isSaved) s->print("<script>var _showSaved=true;</script>");
 
     s->print("<div id='unsavedBar' style='display:none;position:fixed;bottom:0;left:0;right:0;"
              "background:#111e11;border-top:2px solid #1a7a3c;padding:10px 24px;"
-             "z-index:999;align-items:center;gap:12px;box-shadow:0 -4px 16px #0008'>"
-             "<span style='color:#6fcf6f;flex:1;font-weight:bold'>&#9679; Unsaved changes</span>"
-             "<button type='button' onclick='doDiscard()' class='btn btn-reset' style='margin:0'>Discard</button>"
-             "<button type='button' onclick='doSave()' class='btn btn-save' style='margin:0'>&#128190; Save</button>"
+             "z-index:999;justify-content:center;align-items:center;gap:12px;box-shadow:0 -4px 16px #0008'>"
+             "<span id='barSavedMsg' style='display:none;color:#6fcf6f;font-weight:bold'>&#10003; Mapping saved.</span>"
+             "<span id='barUnsavedLabel' style='color:#6fcf6f;font-weight:bold'>&#9679; Unsaved changes</span>"
+             "<button id='barDiscard' type='button' onclick='doDiscard()' class='btn btn-reset' style='margin:0'>Discard</button>"
+             "<button id='barSave' type='button' onclick='doSave()' class='btn btn-save' style='margin:0'>&#128190; Save</button>"
              "</div>");
 
     // --- Import ---
@@ -922,6 +1012,8 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "html+=buildRow(i,e.name,e.city,e.disabled);}"
              "tbody.innerHTML=html;"
              "rowCount=LED_SLOT_COUNT;"
+             "initSnapshot();"
+             "if(typeof _showSaved!=='undefined'&&_showSaved)showSavedState();"
              "updateSpaceStatus();"
              "}).catch(function(){document.getElementById('mapBody').innerHTML="
              "'<tr><td colspan=8 style=color:#e74c3c>&#9888; Failed to load mapping from /api/spacemap</td></tr>';});"
