@@ -94,12 +94,15 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
     // on every API fetch.
     if (!_tlsClientReady) {
         _sharedTlsClient.setInsecure(); // No CA bundle on the device – acceptable for this use case.
+        _sharedTlsClient.setTimeout(5); // seconds, mbedTLS read/write timeout
         _tlsClientReady = true;
     }
 
     HTTPClient http;
     http.begin(_sharedTlsClient, spaceApiUrl);
-    http.useHTTP10(true); // Required for streamed / chunked reading.
+    http.useHTTP10(true);              // Required for streamed / chunked reading.
+    http.setConnectTimeout(5000);      // ms - TCP + TLS handshake
+    http.setTimeout(8000);             // ms - response timeout
 
     _lastAttemptMs = millis();
     int httpCode = http.GET();
@@ -113,6 +116,7 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
     }
 
     Stream& responseStream = http.getStream();
+    responseStream.setTimeout(2000);   // ms - max gap between bytes while parsing
 
     // Filter: pull only the fields we actually need to reduce memory pressure.
     // The SpaceAPI wraps all space data inside a "data" object:
