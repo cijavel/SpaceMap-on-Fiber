@@ -9,6 +9,9 @@ int  WebClientHandler::_lastTotalObjects  = 0;
 int  WebClientHandler::_lastWatchListSize = 0;
 std::vector<String> WebClientHandler::_lastUnmatchedNames;
 
+WiFiClientSecure WebClientHandler::_sharedTlsClient;
+bool             WebClientHandler::_tlsClientReady = false;
+
 // --------------------------------------------------------------------------
 // Add a new hackerspace entry or update the status of an existing one.
 // The timestamp is only refreshed when the status actually changes.
@@ -55,11 +58,16 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
     }
     _lastWatchListSize = activeWatchCount;
 
-    HTTPClient http;
-    WiFiClientSecure client;
-    client.setInsecure(); // No CA bundle on the device – acceptable for this use case.
+    // Configure the shared TLS client once. After this call, the mbedTLS
+    // buffers stay alive for the lifetime of the program — no re-allocation
+    // on every API fetch.
+    if (!_tlsClientReady) {
+        _sharedTlsClient.setInsecure(); // No CA bundle on the device – acceptable for this use case.
+        _tlsClientReady = true;
+    }
 
-    http.begin(client, spaceApiUrl);
+    HTTPClient http;
+    http.begin(_sharedTlsClient, spaceApiUrl);
     http.useHTTP10(true); // Required for streamed / chunked reading.
 
     _lastAttemptMs = millis();

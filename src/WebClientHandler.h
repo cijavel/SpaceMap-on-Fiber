@@ -46,6 +46,13 @@ private:
     static int  _lastWatchListSize;
     static std::vector<String> _lastUnmatchedNames;
 
+    // Shared TLS client. Created once at first use, then reused for every
+    // API call so the mbedTLS buffers stay allocated in the same heap slot
+    // instead of being freed and re-allocated on each fetch (which would
+    // fragment the heap over weeks of uptime).
+    static WiFiClientSecure _sharedTlsClient;
+    static bool             _tlsClientReady;
+
     // Add a new entry or update the status of an existing one in spaceStatusList.
     static void updateOrInsertStatus(std::vector<SpaceStatusList>& spaceStatusList,
                                      int ledIndex, const String& name, SpaceStatus status);
