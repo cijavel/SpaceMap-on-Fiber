@@ -514,6 +514,8 @@ function checkApi() {
             var pbox = document.getElementById('parseStatus');
             if (d.httpCode === 0) { pbox.style.display = 'none'; return; }
             pbox.style.display = 'block';
+            pbox.style.cursor  = 'pointer';
+            pbox.onclick       = function() { location.href = '/spacemap'; };
             if (!d.ok) {
                 pbox.style.borderColor = '#555';
                 pbox.innerHTML = '<span style="color:#777;font-size:0.9em">&#8212; Parse status not available (HTTP error)</span>';
