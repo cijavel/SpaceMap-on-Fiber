@@ -9,6 +9,15 @@ int WiFiHandler::failedReconnectCount = 0;
 // --------------------------------------------------------------------------
 void WiFiHandler::initWifi() {
     WiFiClass::setHostname(DeviceName);
+
+    // Stop the WiFi library from writing credentials to NVS on every begin()
+    // call. We always pass SSID/password explicitly, so persistence is not
+    // needed and the constant flash writes shorten the NVS partition lifetime.
+    WiFi.persistent(false);
+    // Let the IDF restore the link automatically after a transient drop, so
+    // we only need to handle hard failures (router reboot, password change).
+    WiFi.setAutoReconnect(true);
+
 #ifdef DEBUG
     Serial.print("\nWIFI: Connecting to ");
     Serial.println(WIFI_SSID);
