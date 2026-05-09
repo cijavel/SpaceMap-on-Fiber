@@ -10,6 +10,11 @@
 // Live-Statusliste aus main.cpp – wird für die LED-Wiederherstellung nach dem Blinken benötigt.
 extern std::vector<SpaceStatusList> spaceStatusList;
 
+// Definition of the static guard flag declared in SettingsWebServer.h.
+// Reset to false by the blink task itself once it finishes (or by the
+// handler if xTaskCreate fails to start the task).
+bool SettingsWebServer::_blinkTaskRunning = false;
+
 // ---------------------------------------------------------------------------
 // Static PROGMEM blocks — keep large, read-only text out of DRAM entirely.
 // Each block is streamed once per request; the ESP32 never needs to hold
@@ -1009,20 +1014,42 @@ void SettingsWebServer::handleSpaceMapBlink(AsyncWebServerRequest* request) {
         request->send(400, "application/json", "{\"ok\":false,\"error\":\"led index out of range\"}");
         return;
     }
-    request->send(200, "application/json", "{\"ok\":true}");
+
+    // Reject the request if a blink task is already running. This protects the
+    // heap and the FreeRTOS task pool from being flooded by repeated calls.
+    if (_blinkTaskRunning) {
+        request->send(429, "application/json", "{\"ok\":false,\"error\":\"blink already running\"}");
+        return;
+    }
 
     struct BlinkParams {
         uint8_t ledIndex;
         std::vector<SpaceStatusList> snapshot;
     };
-    auto* p = new BlinkParams{(uint8_t)ledIndex, spaceStatusList};
+    auto* params = new BlinkParams{(uint8_t)ledIndex, spaceStatusList};
 
-    xTaskCreate([](void* arg) {
+    // Mark the guard as running BEFORE xTaskCreate so a fast follow-up
+    // request cannot slip past the check above while the task is starting.
+    _blinkTaskRunning = true;
+
+    BaseType_t taskCreated = xTaskCreate([](void* arg) {
         auto* bp = static_cast<BlinkParams*>(arg);
         NeoPixelLED::getInstance().blinkLED(bp->ledIndex, bp->snapshot);
         delete bp;
+        _blinkTaskRunning = false;   // Allow the next blink request.
         vTaskDelete(nullptr);
-    }, "blink_task", 4096, p, 1, nullptr);
+    }, "blink_task", 4096, params, 1, nullptr);
+
+    if (taskCreated != pdPASS) {
+        // xTaskCreate failed (likely out of heap). Clean up the parameter
+        // block we allocated and tell the client to retry later.
+        delete params;
+        _blinkTaskRunning = false;
+        request->send(503, "application/json", "{\"ok\":false,\"error\":\"task creation failed\"}");
+        return;
+    }
+
+    request->send(200, "application/json", "{\"ok\":true}");
 }
 
 // --------------------------------------------------------------------------
