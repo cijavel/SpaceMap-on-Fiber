@@ -25,7 +25,9 @@
 // Default SpaceAPI endpoint – returns a JSON array of all registered hackerspaces.
 #define webpage_SpaceAPI "https://api.spaceapi.io/"
 
-#define BAUDRATE 9600
+// 115200 chosen so that Serial.print() in the API/WiFi error paths does not
+// noticeably block the loop (60 bytes at 9600 baud = ~60 ms; at 115200 ~5 ms).
+#define BAUDRATE 115200
 #define DeviceName "SpaceMap on Fiber 2026"
 
 // LED strip configuration.
