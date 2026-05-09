@@ -116,13 +116,21 @@ void WiFiHandler::reconnect() {
         connectionAttempts++;
     }
 
-#ifdef DEBUG
     if (WiFiClass::status() == WL_CONNECTED) {
+        // mDNS does not survive a WiFi.disconnect(): re-register so the device
+        // stays reachable as http://spacemap.local after the link comes back.
+        MDNS.end();
+        if (MDNS.begin(DeviceName)) {
+#ifdef DEBUG
+            Serial.println("WIFI: mDNS re-registered after reconnect");
+#endif
+        }
+#ifdef DEBUG
         Serial.println();
         Serial.println("WIFI: reconnected.");
         Serial.println(WiFi.localIP());
-    }
 #endif
+    }
 }
 
 // --------------------------------------------------------------------------
