@@ -100,9 +100,10 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
 
     HTTPClient http;
     http.begin(_sharedTlsClient, spaceApiUrl);
-    http.useHTTP10(true);              // Required for streamed / chunked reading.
-    http.setConnectTimeout(5000);      // ms - TCP + TLS handshake
-    http.setTimeout(8000);             // ms - response timeout
+    http.useHTTP10(true);                                   // Required for streamed / chunked reading.
+    http.setConnectTimeout(5000);                           // ms - TCP + TLS handshake
+    http.setTimeout(8000);                                  // ms - response timeout
+    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS); // Survive a future SpaceAPI 301/302 move.
 
     _lastAttemptMs = millis();
     int httpCode = http.GET();
