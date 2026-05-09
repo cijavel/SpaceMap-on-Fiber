@@ -1,11 +1,40 @@
 #include "AppConfig.h"
 #include "DataSpaceList.h"
+#include <nvs_flash.h>
 
 // NVS namespace – must be 15 characters or fewer.
 static const char* NVS_NAMESPACE = "spacemap";
 
+// Tracks whether we have already tried to recover from a corrupt NVS during
+// this boot. Recovery wipes the whole partition, so we only attempt it once.
+static bool nvsRecoveryAttempted = false;
+
+// Erase the NVS partition and reinitialise it. This is the standard recovery
+// pattern recommended by Espressif when Preferences::begin() fails with a
+// hard error (corrupt header, partition too small, write counter exhausted).
+//
+// WARNING: this wipes ALL stored settings - the app settings, the SpaceMap
+// data and the WiFi credentials cached by the ESP32 WiFi stack. The next
+// load() call will see an empty namespace and fall back to compile-time
+// defaults from Configuration.h.
+static bool recoverFromCorruptNvs() {
+    if (nvsRecoveryAttempted) return false;
+    nvsRecoveryAttempted = true;
+    Serial.println("CFG: NVS appears corrupt - erasing partition and reinitialising");
+    if (nvs_flash_erase() != ESP_OK) return false;
+    if (nvs_flash_init()  != ESP_OK) return false;
+    return true;
+}
+
 void AppConfig::load() {
-    if (!_prefs.begin(NVS_NAMESPACE, /*readOnly=*/false)) {
+    bool ok = _prefs.begin(NVS_NAMESPACE, /*readOnly=*/false);
+    if (!ok) {
+        // First failure: try once to recover by wiping the partition.
+        if (recoverFromCorruptNvs()) {
+            ok = _prefs.begin(NVS_NAMESPACE, /*readOnly=*/false);
+        }
+    }
+    if (!ok) {
 #ifdef DEBUG
         Serial.println("CFG: NVS open failed in load()");
 #endif
