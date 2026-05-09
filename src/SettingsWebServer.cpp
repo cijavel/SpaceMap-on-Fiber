@@ -19,11 +19,11 @@ extern std::vector<SpaceStatusList> spaceStatusList;
 // Shared CSS (injected by htmlHeader).
 static const char CSS[] PROGMEM = R"css(
 body{font-family:sans-serif;margin:0;background:#111;color:#eee;}
-nav{background:#1a1a1a;padding:10px 20px;border-bottom:2px solid #e02020;display:flex;align-items:center;}
+nav{background:#1a1a1a;padding:10px 20px;border-bottom:2px solid #e02020;display:flex;align-items:center;justify-content:center;position:relative;}
 nav a{color:#2dbe60;text-decoration:none;margin-right:16px;font-weight:bold;}
 nav a:hover{color:#fff;text-decoration:underline;}
-.nav-links{display:flex;align-items:center;flex:1;}
-#themeToggle{margin-left:auto;background:none;border:1px solid #444;border-radius:6px;
+.nav-links{display:flex;align-items:center;}
+#themeToggle{position:absolute;right:20px;background:none;border:1px solid #444;border-radius:6px;
 color:#eee;cursor:pointer;font-size:1.1em;padding:3px 10px;line-height:1.4;}
 #themeToggle:hover{border-color:#2dbe60;}
 .container{max-width:700px;margin:30px auto;padding:0 16px;}
