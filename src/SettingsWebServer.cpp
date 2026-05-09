@@ -743,6 +743,35 @@ String SettingsWebServer::navBar() {
 }
 
 // --------------------------------------------------------------------------
+// Streaming HTML fragment helpers
+// Same output as the String-returning helpers above, but written piece by
+// piece into the response stream. The big CSS block is read straight from
+// PROGMEM via FPSTR(), so it never lives in the heap as a copy.
+// --------------------------------------------------------------------------
+void SettingsWebServer::streamHtmlHeader(AsyncResponseStream* s, const String& title) {
+    s->print(F("<!DOCTYPE html><html lang='en'><head>"
+               "<meta charset='UTF-8'>"
+               "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+               "<title>SpaceMap - "));
+    s->print(title);
+    s->print(F("</title><style>"));
+    s->print(FPSTR(CSS));   // streamed from PROGMEM, never copied into a String
+    s->print(F("</style></head><body>"));
+}
+
+void SettingsWebServer::streamHtmlFooter(AsyncResponseStream* s) {
+    s->print(F("</div></main></body></html>"));
+}
+
+void SettingsWebServer::streamNavBar(AsyncResponseStream* s) {
+    s->print(F("<nav aria-label='Hauptnavigation'>"
+               "<a href='/'>&#127968; Overview</a>"
+               "<a href='/settings'>&#9881; Settings</a>"
+               "<a href='/spacemap'>&#128280; SpaceMap</a>"
+               "</nav><main><div class='container'>"));
+}
+
+// --------------------------------------------------------------------------
 // Streaming page renderers
 // Each function writes into an AsyncResponseStream in small pieces so that
 // the ESP32 heap never needs to hold the full page as one String object.

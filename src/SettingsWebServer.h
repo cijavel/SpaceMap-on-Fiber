@@ -51,6 +51,13 @@ private:
     static String htmlHeader(const String& title);
     static String htmlFooter();
     static String navBar();
+
+    // Streaming variants of the helpers above. They write the same markup
+    // directly into the response stream, so the CSS block from PROGMEM is
+    // never copied into a heap String. Use these for all new code paths.
+    static void streamHtmlHeader(AsyncResponseStream* s, const String& title);
+    static void streamHtmlFooter(AsyncResponseStream* s);
+    static void streamNavBar(AsyncResponseStream* s);
 };
 
 #endif // SETTINGS_WEB_SERVER_H
