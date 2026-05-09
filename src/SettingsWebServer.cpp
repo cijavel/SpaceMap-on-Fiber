@@ -21,7 +21,7 @@ bool SettingsWebServer::_blinkTaskRunning = false;
 // more than one chunk in heap at the same time.
 // ---------------------------------------------------------------------------
 
-// Shared CSS (injected by htmlHeader).
+// Shared CSS (streamed by streamHtmlHeader).
 static const char CSS[] PROGMEM = R"css(
 body{font-family:sans-serif;margin:0;background:#111;color:#eee;}
 nav{background:#1a1a1a;padding:10px 20px;border-bottom:2px solid #e02020;display:flex;align-items:center;justify-content:center;position:relative;}
@@ -772,10 +772,10 @@ void SettingsWebServer::handleSettingsReset(AsyncWebServerRequest* request) {
 
 void SettingsWebServer::handleNotFound(AsyncWebServerRequest* request) {
     AsyncResponseStream* s = request->beginResponseStream("text/html");
-    s->print(htmlHeader("404"));
-    s->print(navBar());
+    streamHtmlHeader(s, "404");
+    streamNavBar(s);
     s->print("<h2>404 - Page not found</h2><p><a href='/'>Back to home</a></p>");
-    s->print(htmlFooter());
+    streamHtmlFooter(s);
     request->send(s);
 }
 
@@ -791,50 +791,52 @@ void SettingsWebServer::handleHttpsRedirect(AsyncWebServerRequest* request) {
 }
 
 // --------------------------------------------------------------------------
-// HTML fragment helpers
+// Streaming HTML fragment helpers
+// Each helper writes its markup piece by piece into the response stream.
+// The big CSS block is read straight from PROGMEM via FPSTR(), so it never
+// lives in the heap as a copy.
 // --------------------------------------------------------------------------
-String SettingsWebServer::htmlHeader(const String& title) {
-    String h;
-    h.reserve(512);
-    h  = "<!DOCTYPE html><html lang='en'><head>"
-         "<meta charset='UTF-8'>"
-         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-         "<title>SpaceMap - ";
-    h += title;
-    h += "</title><style>";
-    h += FPSTR(CSS);   // read from PROGMEM, no DRAM copy retained
-    h += "</style></head>"
-         "<body>"
-         "<script>if(localStorage.getItem('theme')==='light')document.body.classList.add('light');</script>";
-    return h;
+void SettingsWebServer::streamHtmlHeader(AsyncResponseStream* s, const String& title) {
+    s->print(F("<!DOCTYPE html><html lang='en'><head>"
+               "<meta charset='UTF-8'>"
+               "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+               "<title>SpaceMap - "));
+    s->print(title);
+    s->print(F("</title><style>"));
+    s->print(FPSTR(CSS));   // streamed from PROGMEM, never copied into a String
+    s->print(F("</style></head>"
+               "<body>"
+               // Apply the saved theme as early as possible so the page does
+               // not flash in dark mode before the toggle script runs.
+               "<script>if(localStorage.getItem('theme')==='light')document.body.classList.add('light');</script>"));
 }
 
-String SettingsWebServer::htmlFooter() {
-    return "</div></main></body></html>";
+void SettingsWebServer::streamHtmlFooter(AsyncResponseStream* s) {
+    s->print(F("</div></main></body></html>"));
 }
 
-String SettingsWebServer::navBar() {
-    return "<nav aria-label='Hauptnavigation'>"
-           "<div class='nav-links'>"
-           "<a href='/'>&#127968; Overview</a>"
-           "<a href='/settings'>&#9881; Settings</a>"
-           "<a href='/spacemap'>&#128280; SpaceMap</a>"
-           "</div>"
-           "<button id='themeToggle' onclick='toggleTheme()' title='Toggle light/dark mode'>"
-           "<span id='themeIcon'></span>"
-           "</button>"
-           "</nav>"
-           "<script>"
-           "function toggleTheme(){"
-             "var isLight=document.body.classList.toggle('light');"
-             "localStorage.setItem('theme',isLight?'light':'dark');"
-             "updateThemeIcon();}"
-           "function updateThemeIcon(){"
-             "var el=document.getElementById('themeIcon');"
-             "if(el)el.textContent=document.body.classList.contains('light')?'\\uD83C\\uDF19':'\\u2600\\uFE0F';}"
-           "updateThemeIcon();"
-           "</script>"
-           "<main><div class='container'>";
+void SettingsWebServer::streamNavBar(AsyncResponseStream* s) {
+    s->print(F("<nav aria-label='Hauptnavigation'>"
+               "<div class='nav-links'>"
+               "<a href='/'>&#127968; Overview</a>"
+               "<a href='/settings'>&#9881; Settings</a>"
+               "<a href='/spacemap'>&#128280; SpaceMap</a>"
+               "</div>"
+               "<button id='themeToggle' onclick='toggleTheme()' title='Toggle light/dark mode'>"
+               "<span id='themeIcon'></span>"
+               "</button>"
+               "</nav>"
+               "<script>"
+               "function toggleTheme(){"
+                 "var isLight=document.body.classList.toggle('light');"
+                 "localStorage.setItem('theme',isLight?'light':'dark');"
+                 "updateThemeIcon();}"
+               "function updateThemeIcon(){"
+                 "var el=document.getElementById('themeIcon');"
+                 "if(el)el.textContent=document.body.classList.contains('light')?'\\uD83C\\uDF19':'\\u2600\\uFE0F';}"
+               "updateThemeIcon();"
+               "</script>"
+               "<main><div class='container'>"));
 }
 
 // --------------------------------------------------------------------------
@@ -844,8 +846,8 @@ String SettingsWebServer::navBar() {
 // --------------------------------------------------------------------------
 
 void SettingsWebServer::streamIndexPage(AsyncResponseStream* s, const String& message) {
-    s->print(htmlHeader("Overview"));
-    s->print(navBar());
+    streamHtmlHeader(s, "Overview");
+    streamNavBar(s);
     s->print("<h1>SpaceMap on Fiber</h1>");
     s->print("<p>Welcome to the SpaceMap controller web interface.</p>");
     s->print("<div id='apiStatus' aria-live='polite' style='margin-top:20px;padding:14px 18px;border-radius:6px;"
@@ -860,14 +862,14 @@ void SettingsWebServer::streamIndexPage(AsyncResponseStream* s, const String& me
         s->print(message);
         s->print("</div>");
     }
-    s->print(htmlFooter());
+    streamHtmlFooter(s);
 }
 
 void SettingsWebServer::streamSettingsPage(AsyncResponseStream* s, const String& message) {
     AppConfig& cfg = AppConfig::getInstance();
 
-    s->print(htmlHeader("Settings"));
-    s->print(navBar());
+    streamHtmlHeader(s, "Settings");
+    streamNavBar(s);
     s->print("<h1>Settings</h1>");
 
     if (message.length() > 0) {
@@ -926,12 +928,12 @@ void SettingsWebServer::streamSettingsPage(AsyncResponseStream* s, const String&
              "<button type='submit' class='btn btn-reset'>&#8635; Reset to defaults</button>"
              "</form>");
 
-    s->print(htmlFooter());
+    streamHtmlFooter(s);
 }
 
 void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String& message) {
-    s->print(htmlHeader("SpaceMap"));
-    s->print(navBar());
+    streamHtmlHeader(s, "SpaceMap");
+    streamNavBar(s);
     s->print("<h1>Hackerspace Mapping</h1>");
 
     // --- Editor table ---
@@ -1028,7 +1030,7 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "</script>");
     s->print(FPSTR(SPACEMAP_JS));
 
-    s->print(htmlFooter());
+    streamHtmlFooter(s);
 }
 
 // --------------------------------------------------------------------------
