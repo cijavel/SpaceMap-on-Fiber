@@ -13,7 +13,7 @@ extern std::vector<SpaceStatusList> spaceStatusList;
 // Definition of the static guard flag declared in SettingsWebServer.h.
 // Reset to false by the blink task itself once it finishes (or by the
 // handler if xTaskCreate fails to start the task).
-bool SettingsWebServer::_blinkTaskRunning = false;
+std::atomic<bool> SettingsWebServer::_blinkTaskRunning{false};
 
 // ---------------------------------------------------------------------------
 // Static PROGMEM blocks — keep large, read-only text out of DRAM entirely.

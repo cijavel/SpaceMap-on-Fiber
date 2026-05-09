@@ -4,6 +4,7 @@
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include <WiFi.h>
+#include <atomic>
 
 // Wraps the AsyncWebServer and registers all routes for the settings web UI.
 // Access via getInstance(); call begin() once in setup().
@@ -27,7 +28,9 @@ private:
 
     // True while a /spacemap/blink task is active. Prevents concurrent blink
     // tasks from flooding the heap and the FreeRTOS task pool.
-    static bool _blinkTaskRunning;
+    // Atomic because the value is read/written from the AsyncWebServer task
+    // and the FreeRTOS blink task on different cores.
+    static std::atomic<bool> _blinkTaskRunning;
 
     void registerRoutes();
 
