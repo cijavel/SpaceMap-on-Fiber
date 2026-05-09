@@ -16,7 +16,7 @@ extern std::vector<SpaceStatusList> spaceStatusList;
 // more than one chunk in heap at the same time.
 // ---------------------------------------------------------------------------
 
-// Shared CSS (injected by htmlHeader).
+// Shared CSS (streamed by streamHtmlHeader).
 static const char CSS[] PROGMEM = R"css(
 body{font-family:sans-serif;margin:0;background:#111;color:#eee;}
 nav{background:#1a1a1a;padding:10px 20px;border-bottom:2px solid #e02020;}
@@ -714,39 +714,10 @@ void SettingsWebServer::handleHttpsRedirect(AsyncWebServerRequest* request) {
 }
 
 // --------------------------------------------------------------------------
-// HTML fragment helpers
-// --------------------------------------------------------------------------
-String SettingsWebServer::htmlHeader(const String& title) {
-    String h;
-    h.reserve(512);
-    h  = "<!DOCTYPE html><html lang='en'><head>"
-         "<meta charset='UTF-8'>"
-         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-         "<title>SpaceMap - ";
-    h += title;
-    h += "</title><style>";
-    h += FPSTR(CSS);   // read from PROGMEM, no DRAM copy retained
-    h += "</style></head><body>";
-    return h;
-}
-
-String SettingsWebServer::htmlFooter() {
-    return "</div></main></body></html>";
-}
-
-String SettingsWebServer::navBar() {
-    return "<nav aria-label='Hauptnavigation'>"
-           "<a href='/'>&#127968; Overview</a>"
-           "<a href='/settings'>&#9881; Settings</a>"
-           "<a href='/spacemap'>&#128280; SpaceMap</a>"
-           "</nav><main><div class='container'>";
-}
-
-// --------------------------------------------------------------------------
 // Streaming HTML fragment helpers
-// Same output as the String-returning helpers above, but written piece by
-// piece into the response stream. The big CSS block is read straight from
-// PROGMEM via FPSTR(), so it never lives in the heap as a copy.
+// Each helper writes its markup piece by piece into the response stream.
+// The big CSS block is read straight from PROGMEM via FPSTR(), so it never
+// lives in the heap as a copy.
 // --------------------------------------------------------------------------
 void SettingsWebServer::streamHtmlHeader(AsyncResponseStream* s, const String& title) {
     s->print(F("<!DOCTYPE html><html lang='en'><head>"
