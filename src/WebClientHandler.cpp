@@ -10,6 +10,33 @@ int  WebClientHandler::_lastWatchListSize = 0;
 std::vector<String> WebClientHandler::_lastUnmatchedNames;
 
 // --------------------------------------------------------------------------
+// Drop entries whose space name is no longer in the watch list, and refresh
+// the LED index of the remaining entries to match the current SpaceMap.
+//
+// Without this step, two stale states could survive across web UI edits:
+//   1. An entry for a space that the user removed from the watch list would
+//      stay in spaceStatusList forever, keeping its old LED lit.
+//   2. If the user moved a space to a different LED slot, the old ledIndex
+//      stored at insertion time would still drive the wrong LED.
+//
+// We use a classic read/write iterator pattern to filter and update the
+// vector in place — no temporary copy needed.
+// --------------------------------------------------------------------------
+void WebClientHandler::synchronizeStatusListWithMapping(
+        std::vector<SpaceStatusList>& spaceStatusList,
+        DataSpaceList& spaceDirectory) {
+    auto writeIt = spaceStatusList.begin();
+    for (auto readIt = spaceStatusList.begin(); readIt != spaceStatusList.end(); ++readIt) {
+        int currentLed = spaceDirectory.getLEDforName(readIt->getName());
+        if (currentLed < 0) continue;          // Name removed from watch list - drop entry.
+        readIt->ledIndex = currentLed;         // Position may have changed - refresh it.
+        if (writeIt != readIt) *writeIt = *readIt;
+        ++writeIt;
+    }
+    spaceStatusList.erase(writeIt, spaceStatusList.end());
+}
+
+// --------------------------------------------------------------------------
 // Add a new hackerspace entry or update the status of an existing one.
 // The timestamp is only refreshed when the status actually changes.
 // --------------------------------------------------------------------------
@@ -41,6 +68,10 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
     _lastUnmatchedNames.clear();
 
     DataSpaceList& spaceDirectory = DataSpaceList::getInstance();
+
+    // Remove entries that no longer exist in the watch list and update LED
+    // indices for entries whose position changed since the last fetch.
+    synchronizeStatusListWithMapping(spaceStatusList, spaceDirectory);
 
     // Snapshot watch list for unmatched-name tracking.
     // Empty entries (no name configured) are excluded from matching and
