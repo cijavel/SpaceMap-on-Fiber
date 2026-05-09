@@ -7,10 +7,16 @@ const int     daylightOffsetSec = 3600;
 const String  timezoneRule      = "CET-1CEST,M3.5.0,M10.5.0/3"; // POSIX timezone rule for Central Europe
 
 // --------------------------------------------------------------------------
-// Initialise the system clock via NTP.
+// Initialise the system clock via NTP and apply the POSIX timezone rule.
 // --------------------------------------------------------------------------
 void TimeHandler::initTime() {
     configTime(gmtOffsetSec, daylightOffsetSec, ntpServer);
+
+    // Apply the timezone rule once. setenv() allocates on the heap, and the
+    // localTime() function used to call it on every status update — that
+    // caused steady heap fragmentation over weeks of uptime.
+    setenv("TZ", timezoneRule.c_str(), 1);
+    tzset();
 }
 
 // --------------------------------------------------------------------------
@@ -19,10 +25,6 @@ void TimeHandler::initTime() {
 String TimeHandler::localTime(const String& format) {
     struct tm timeinfo{};
     char formattedTime[60];
-
-    // Apply the POSIX timezone rule so that daylight-saving offsets are correct.
-    setenv("TZ", timezoneRule.c_str(), 1);
-    tzset();
 
     if (!getLocalTime(&timeinfo)) {
         return "TIME: Failed to obtain";
