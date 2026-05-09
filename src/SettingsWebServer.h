@@ -25,6 +25,10 @@ private:
     AsyncWebServer _server;
     AsyncWebServer _httpsServer{443};
 
+    // True while a /spacemap/blink task is active. Prevents concurrent blink
+    // tasks from flooding the heap and the FreeRTOS task pool.
+    static bool _blinkTaskRunning;
+
     void registerRoutes();
 
     // Route handlers
