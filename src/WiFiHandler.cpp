@@ -20,6 +20,7 @@ void WiFiHandler::initWifi() {
 
         int connectionAttempts = 0;
         while (WiFiClass::status() != WL_CONNECTED && connectionAttempts < WIFI_CONNECT_TIMEOUT_STEPS) {
+            yield();        // give the scheduler a chance, just in case a task WDT is active
             delay(500);
             connectionAttempts++;
         }
@@ -33,7 +34,7 @@ void WiFiHandler::initWifi() {
             Serial.println(WIFI_MAX_RETRIES);
 #endif
             WiFi.disconnect();
-            delay(1000);
+            delay(200);     // short cooldown - was 1000 ms, which blocked the loop unnecessarily
         }
     }
 
@@ -96,11 +97,12 @@ bool WiFiHandler::verifyAndReconnect() {
 // --------------------------------------------------------------------------
 void WiFiHandler::reconnect() {
     WiFi.disconnect();
-    delay(1000);
+    delay(200);     // short cooldown - was 1000 ms, which blocked the loop unnecessarily
     WiFi.begin(WIFI_SSID, WIFI_PW);
 
     int connectionAttempts = 0;
     while (WiFiClass::status() != WL_CONNECTED && connectionAttempts < WIFI_CONNECT_TIMEOUT_STEPS) {
+        yield();    // give the scheduler a chance, just in case a task WDT is active
         delay(500);
         connectionAttempts++;
     }
