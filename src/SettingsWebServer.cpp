@@ -695,10 +695,10 @@ void SettingsWebServer::handleSettingsReset(AsyncWebServerRequest* request) {
 
 void SettingsWebServer::handleNotFound(AsyncWebServerRequest* request) {
     AsyncResponseStream* s = request->beginResponseStream("text/html");
-    s->print(htmlHeader("404"));
-    s->print(navBar());
+    streamHtmlHeader(s, "404");
+    streamNavBar(s);
     s->print("<h2>404 - Page not found</h2><p><a href='/'>Back to home</a></p>");
-    s->print(htmlFooter());
+    streamHtmlFooter(s);
     request->send(s);
 }
 
@@ -778,8 +778,8 @@ void SettingsWebServer::streamNavBar(AsyncResponseStream* s) {
 // --------------------------------------------------------------------------
 
 void SettingsWebServer::streamIndexPage(AsyncResponseStream* s, const String& message) {
-    s->print(htmlHeader("Overview"));
-    s->print(navBar());
+    streamHtmlHeader(s, "Overview");
+    streamNavBar(s);
     s->print("<h1>SpaceMap on Fiber</h1>");
     s->print("<p>Welcome to the SpaceMap controller web interface.</p>");
     s->print("<div id='apiStatus' aria-live='polite' style='margin-top:20px;padding:14px 18px;border-radius:6px;"
@@ -794,14 +794,14 @@ void SettingsWebServer::streamIndexPage(AsyncResponseStream* s, const String& me
         s->print(message);
         s->print("</div>");
     }
-    s->print(htmlFooter());
+    streamHtmlFooter(s);
 }
 
 void SettingsWebServer::streamSettingsPage(AsyncResponseStream* s, const String& message) {
     AppConfig& cfg = AppConfig::getInstance();
 
-    s->print(htmlHeader("Settings"));
-    s->print(navBar());
+    streamHtmlHeader(s, "Settings");
+    streamNavBar(s);
     s->print("<h1>Settings</h1>");
 
     if (message.length() > 0) {
@@ -860,12 +860,12 @@ void SettingsWebServer::streamSettingsPage(AsyncResponseStream* s, const String&
              "<button type='submit' class='btn btn-reset'>&#8635; Reset to defaults</button>"
              "</form>");
 
-    s->print(htmlFooter());
+    streamHtmlFooter(s);
 }
 
 void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String& message) {
-    s->print(htmlHeader("SpaceMap"));
-    s->print(navBar());
+    streamHtmlHeader(s, "SpaceMap");
+    streamNavBar(s);
     s->print("<h1>Hackerspace Mapping</h1>");
 
     // --- Editor table ---
@@ -957,7 +957,7 @@ void SettingsWebServer::streamSpaceMapPage(AsyncResponseStream* s, const String&
              "</script>");
     s->print(FPSTR(SPACEMAP_JS));
 
-    s->print(htmlFooter());
+    streamHtmlFooter(s);
 }
 
 // --------------------------------------------------------------------------
