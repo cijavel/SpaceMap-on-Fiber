@@ -1,5 +1,6 @@
 #include "WiFiHandler.h"
 #include "NeoPixelLED.h"
+#include "TimeHandler.h"
 
 int WiFiHandler::failedReconnectCount = 0;
 
@@ -125,6 +126,12 @@ void WiFiHandler::reconnect() {
             Serial.println("WIFI: mDNS re-registered after reconnect");
 #endif
         }
+
+        // Trigger a fresh NTP sync so status timestamps stay accurate after
+        // a long outage. The IDF only polls SNTP periodically while the link
+        // is up, so a long disconnect can leave the clock noticeably skewed.
+        TimeHandler::initTime();
+
 #ifdef DEBUG
         Serial.println();
         Serial.println("WIFI: reconnected.");
