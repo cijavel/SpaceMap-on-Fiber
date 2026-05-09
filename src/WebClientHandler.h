@@ -49,6 +49,13 @@ private:
     // Add a new entry or update the status of an existing one in spaceStatusList.
     static void updateOrInsertStatus(std::vector<SpaceStatusList>& spaceStatusList,
                                      int ledIndex, const String& name, SpaceStatus status);
+
+    // Drop entries whose space name is no longer in the watch list, and
+    // refresh the LED index of the remaining entries to match the current
+    // SpaceMap. Prevents stale ledIndex values after the user edits the
+    // mapping in the web UI.
+    static void synchronizeStatusListWithMapping(std::vector<SpaceStatusList>& spaceStatusList,
+                                                 DataSpaceList& spaceDirectory);
 };
 
 #endif // SPACE_API_ON_FIBER_WEBCLIENTHANDLER_H
