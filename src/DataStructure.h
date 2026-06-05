@@ -1,9 +1,10 @@
-#include "Arduino.h"
-
 #ifndef SPACE_API_ON_DATASTRUCTURE_H
 #define SPACE_API_ON_DATASTRUCTURE_H
 
-enum class SpaceStatus { INIT, OPEN, CLOSED, UNKNOWN };
+#include <Arduino.h>
+#include <utility>   // std::move
+
+enum class SpaceStatus { init, open, closed, unknown };
 
 // --------------------------------------------------------------------------
 // Describes one entry in the static list of hackerspaces to track:
@@ -15,12 +16,8 @@ struct SpaceSearchList {
     String  city;
     bool    disabled;
 
-    SpaceSearchList(uint8_t ledIndex, String name, String city, bool disabled = false) {
-        this->ledIndex  = ledIndex;
-        this->name      = name;
-        this->city      = city;
-        this->disabled  = disabled;
-    }
+    SpaceSearchList(uint8_t ledIndex, String name, String city, bool disabled = false)
+        : ledIndex(ledIndex), name(std::move(name)), city(std::move(city)), disabled(disabled) {}
 
     int getLED() const {
         return this->ledIndex;
@@ -46,12 +43,8 @@ struct SpaceStatusList {
     SpaceStatus status;
     String      lastChange;
 
-    SpaceStatusList(int ledIndex, String name, SpaceStatus status, String lastChange) {
-        this->ledIndex    = ledIndex;
-        this->name        = name;
-        this->status      = status;
-        this->lastChange  = lastChange;
-    }
+    SpaceStatusList(int ledIndex, String name, SpaceStatus status, String lastChange)
+        : ledIndex(ledIndex), name(std::move(name)), status(status), lastChange(std::move(lastChange)) {}
 
     int getLED() const {
         return this->ledIndex;

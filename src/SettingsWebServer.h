@@ -6,6 +6,10 @@
 #include <WiFi.h>
 #include <atomic>
 
+// Stack size (bytes) for the blink FreeRTOS task.
+// The BlinkParams snapshot vector lives on the task stack — needs more than default.
+static constexpr uint32_t kBlinkTaskStackSize = 4096;
+
 // Wraps the AsyncWebServer and registers all routes for the settings web UI.
 // Access via getInstance(); call begin() once in setup().
 class SettingsWebServer {
@@ -59,6 +63,12 @@ private:
     static void streamHtmlHeader(AsyncResponseStream* s, const String& title);
     static void streamHtmlFooter(AsyncResponseStream* s);
     static void streamNavBar(AsyncResponseStream* s);
+
+    // Escaping helpers — sanitise user-supplied strings before embedding in HTML/JSON.
+    // htmlAttrEscape: escapes &, <, >, ", ' for use in HTML attribute values or text nodes.
+    static String htmlAttrEscape(const String& in);
+    // jsonEscape: escapes \, ", and control characters (\n \r \t) for JSON string literals.
+    static String jsonEscape(const String& in);
 };
 
 #endif // SETTINGS_WEB_SERVER_H

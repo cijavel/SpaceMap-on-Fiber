@@ -3,6 +3,10 @@
 #include "AppConfig.h"
 #include "DataSpaceList.h"
 
+// Named constants for the blink sequence — no magic numbers.
+static constexpr int kBlinkRepeats      = 10;   // number of on/off cycles per blink
+static constexpr int kBlinkHalfPeriodMs = 150;  // ms for each on or off half-period
+
 NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(LED_SLOT_COUNT, LED_DATA_PIN);
 
 // --------------------------------------------------------------------------
@@ -62,9 +66,9 @@ bool NeoPixelLED::updateLEDsUnsafe(std::vector<SpaceStatusList>& spaceStatusList
             color = colorOff;
         } else {
             switch (entry.getStatus()) {
-                case SpaceStatus::OPEN:    color = scaleBrightness(colorOpen,    brightness); break;
-                case SpaceStatus::CLOSED:  color = scaleBrightness(colorClosed,  brightness); break;
-                case SpaceStatus::UNKNOWN: color = scaleBrightness(colorUnknown, brightness); break;
+                case SpaceStatus::open:    color = scaleBrightness(colorOpen,    brightness); break;
+                case SpaceStatus::closed:  color = scaleBrightness(colorClosed,  brightness); break;
+                case SpaceStatus::unknown: color = scaleBrightness(colorUnknown, brightness); break;
                 default:                   color = scaleBrightness(colorOff,     brightness); break;
             }
         }
@@ -90,13 +94,13 @@ void NeoPixelLED::blinkLED(uint8_t ledIndex, std::vector<SpaceStatusList>& space
     uint8_t brightness = AppConfig::getInstance().getLedBrightness();
     RgbColor white = scaleBrightness(colorWhite, brightness);
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < kBlinkRepeats; i++) {
         strip.SetPixelColor(ledIndex, white);
         strip.Show();
-        delay(150);
+        delay(kBlinkHalfPeriodMs);
         strip.SetPixelColor(ledIndex, colorOff);
         strip.Show();
-        delay(150);
+        delay(kBlinkHalfPeriodMs);
     }
 
     // Restore full strip state while still holding the mutex.

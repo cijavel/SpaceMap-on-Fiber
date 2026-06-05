@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <NeoPixelBus.h>
+#include <freertos/semphr.h>
 
 #include "Configuration.h"
 #include "WiFiHandler.h"
@@ -44,6 +45,11 @@
 // Holds the current open/closed status for each tracked hackerspace.
 std::vector<SpaceStatusList> spaceStatusList;
 
+// Mutex that guards all read/write access to spaceStatusList.
+// Written from loop() via WebClientHandler::getSpaceStatus(); read from the
+// async_tcp task via the /api/spacestatus handler — must be synchronised.
+SemaphoreHandle_t spaceStatusMutex = nullptr;
+
 // Timestamps in milliseconds for interval tracking.
 // Using unsigned long and subtraction (now - last) handles millis() overflow
 // correctly after ~49 days because unsigned wraparound gives the right delta.
@@ -67,6 +73,9 @@ void setup() {
     Serial.begin(BAUDRATE);
     Serial.println();
     Serial.println("\nINITIAL");
+
+    // Create the mutex that guards spaceStatusList before any task can touch it.
+    spaceStatusMutex = xSemaphoreCreateMutex();
 
     // Load runtime configuration from NVS (defaults from Configuration.h).
     AppConfig::getInstance().load();
@@ -147,6 +156,13 @@ void loop() {
     // --- LED update ---
     if (now - lastLedUpdate >= AppConfig::getInstance().getIntervalLEDs() * 1000UL) {
         lastLedUpdate = now;
-        neoLED.updateLEDs(spaceStatusList);
+        // Take a snapshot under lock so the LED update never races with
+        // the API fetch writing to spaceStatusList.
+        std::vector<SpaceStatusList> snapshot;
+        if (xSemaphoreTake(spaceStatusMutex, portMAX_DELAY) == pdTRUE) {
+            snapshot = spaceStatusList;
+            xSemaphoreGive(spaceStatusMutex);
+        }
+        neoLED.updateLEDs(snapshot);
     }
 }

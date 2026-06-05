@@ -6,9 +6,12 @@
 #include "WebClientHandler.h"
 #include <ArduinoJson.h>
 #include <freertos/task.h>
+#include <freertos/semphr.h>
 
 // Live-Statusliste aus main.cpp – wird für die LED-Wiederherstellung nach dem Blinken benötigt.
 extern std::vector<SpaceStatusList> spaceStatusList;
+// Mutex that guards all access to spaceStatusList (defined in main.cpp).
+extern SemaphoreHandle_t spaceStatusMutex;
 
 // Definition of the static guard flag declared in SettingsWebServer.h.
 // Reset to false by the blink task itself once it finishes (or by the
@@ -632,19 +635,27 @@ void SettingsWebServer::registerRoutes() {
     });
 
     _server.on("/api/spacestatus", HTTP_GET, [this](AsyncWebServerRequest* req) {
+        // Copy the list under lock, then build JSON without holding the lock
+        // to keep the critical section as short as possible (no I/O under lock).
+        std::vector<SpaceStatusList> snapshot;
+        if (spaceStatusMutex && xSemaphoreTake(spaceStatusMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+            snapshot = spaceStatusList;
+            xSemaphoreGive(spaceStatusMutex);
+        }
+
         AsyncResponseStream* s = req->beginResponseStream("application/json");
         s->print("[");
-        for (size_t i = 0; i < spaceStatusList.size(); i++) {
-            const auto& e = spaceStatusList[i];
+        for (size_t i = 0; i < snapshot.size(); i++) {
+            const auto& e = snapshot[i];
             const char* statusStr;
             switch (e.getStatus()) {
-                case SpaceStatus::OPEN:   statusStr = "OPEN";    break;
-                case SpaceStatus::CLOSED: statusStr = "CLOSED";  break;
+                case SpaceStatus::open:   statusStr = "OPEN";    break;
+                case SpaceStatus::closed: statusStr = "CLOSED";  break;
                 default:                  statusStr = "UNKNOWN"; break;
             }
             if (i > 0) s->print(",");
             s->print("{\"name\":\"");
-            s->print(e.getName());
+            s->print(jsonEscape(e.getName()));
             s->print("\",\"status\":\"");
             s->print(statusStr);
             s->print("\",\"led\":");
@@ -669,7 +680,7 @@ void SettingsWebServer::registerRoutes() {
         s->print(",\"ageSec\":");
         s->print(age);
         s->print(",\"url\":\"");
-        s->print(AppConfig::getInstance().getSpaceApiUrl());
+        s->print(jsonEscape(AppConfig::getInstance().getSpaceApiUrl()));
         s->print("\",\"foundCount\":");
         s->print(WebClientHandler::getLastFoundCount());
         s->print(",\"parseErrors\":");
@@ -683,7 +694,7 @@ void SettingsWebServer::registerRoutes() {
         for (size_t i = 0; i < unmatched.size(); i++) {
             if (i > 0) s->print(",");
             s->print("\"");
-            s->print(unmatched[i]);
+            s->print(jsonEscape(unmatched[i]));
             s->print("\"");
         }
         s->print("]}");
@@ -885,7 +896,7 @@ void SettingsWebServer::streamSettingsPage(AsyncResponseStream* s, const String&
     s->print("<h2>API</h2>");
     s->print("<label for='apiUrl'>SpaceAPI URL</label>"
              "<input id='apiUrl' type='url' name='apiUrl' value='");
-    s->print(cfg.getSpaceApiUrl());
+    s->print(htmlAttrEscape(cfg.getSpaceApiUrl()));
     s->print("'>");
 
     s->print("<label for='apiInterval'>API polling interval (seconds)</label>"
@@ -1123,7 +1134,13 @@ void SettingsWebServer::handleSpaceMapBlink(AsyncWebServerRequest* request) {
         uint8_t ledIndex;
         std::vector<SpaceStatusList> snapshot;
     };
-    auto* params = new BlinkParams{(uint8_t)ledIndex, spaceStatusList};
+    // Copy spaceStatusList under lock before spawning the task.
+    std::vector<SpaceStatusList> statusSnapshot;
+    if (spaceStatusMutex && xSemaphoreTake(spaceStatusMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+        statusSnapshot = spaceStatusList;
+        xSemaphoreGive(spaceStatusMutex);
+    }
+    auto* params = new BlinkParams{(uint8_t)ledIndex, std::move(statusSnapshot)};
 
     // Mark the guard as running BEFORE xTaskCreate so a fast follow-up
     // request cannot slip past the check above while the task is starting.
@@ -1135,7 +1152,7 @@ void SettingsWebServer::handleSpaceMapBlink(AsyncWebServerRequest* request) {
         delete bp;
         _blinkTaskRunning = false;   // Allow the next blink request.
         vTaskDelete(nullptr);
-    }, "blink_task", 4096, params, 1, nullptr);
+    }, "blink_task", kBlinkTaskStackSize, params, 1, nullptr);
 
     if (taskCreated != pdPASS) {
         // xTaskCreate failed (likely out of heap). Clean up the parameter
@@ -1168,9 +1185,9 @@ void SettingsWebServer::handleApiSpaceMapGet(AsyncWebServerRequest* request) {
         s->print("{\"led\":");
         s->print(i);
         s->print(",\"name\":\"");
-        s->print(e ? e->getName() : "");
+        s->print(jsonEscape(e ? e->getName() : ""));
         s->print("\",\"city\":\"");
-        s->print(e ? e->city : "");
+        s->print(jsonEscape(e ? e->city : ""));
         s->print("\",\"disabled\":");
         s->print((e && e->isDisabled()) ? "true" : "false");
         s->print("}");
@@ -1212,4 +1229,46 @@ void SettingsWebServer::handleSpaceMapExport(AsyncWebServerRequest* request) {
     }
     s->print("\n");
     request->send(s);
+}
+
+// --------------------------------------------------------------------------
+// Escaping helpers
+// --------------------------------------------------------------------------
+
+// Escape a string for safe use inside an HTML attribute value or text node.
+// Replaces: & -> &amp;  < -> &lt;  > -> &gt;  " -> &quot;  ' -> &#39;
+String SettingsWebServer::htmlAttrEscape(const String& in) {
+    String out;
+    out.reserve(in.length() + 16);
+    for (unsigned int i = 0; i < in.length(); i++) {
+        char c = in[i];
+        switch (c) {
+            case '&':  out += F("&amp;");  break;
+            case '<':  out += F("&lt;");   break;
+            case '>':  out += F("&gt;");   break;
+            case '"':  out += F("&quot;"); break;
+            case '\'': out += F("&#39;");  break;
+            default:   out += c;           break;
+        }
+    }
+    return out;
+}
+
+// Escape a string for safe embedding as a JSON string value.
+// Replaces: \ -> \\  " -> \"  control chars \n \r \t with their escape sequences.
+String SettingsWebServer::jsonEscape(const String& in) {
+    String out;
+    out.reserve(in.length() + 8);
+    for (unsigned int i = 0; i < in.length(); i++) {
+        char c = in[i];
+        switch (c) {
+            case '\\': out += F("\\\\"); break;
+            case '"':  out += F("\\\""); break;
+            case '\n': out += F("\\n");  break;
+            case '\r': out += F("\\r");  break;
+            case '\t': out += F("\\t");  break;
+            default:   out += c;         break;
+        }
+    }
+    return out;
 }

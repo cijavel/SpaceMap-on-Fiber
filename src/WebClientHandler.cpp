@@ -1,7 +1,11 @@
 #include "WebClientHandler.h"
+#include <freertos/semphr.h>
 
 int           WebClientHandler::_lastHttpCode  = 0;
 unsigned long WebClientHandler::_lastAttemptMs = 0;
+
+// Mutex that guards all access to spaceStatusList (defined in main.cpp).
+extern SemaphoreHandle_t spaceStatusMutex;
 
 int  WebClientHandler::_lastFoundCount    = 0;
 int  WebClientHandler::_lastParseErrors   = 0;
@@ -22,21 +26,36 @@ bool             WebClientHandler::_tlsClientReady = false;
 //   2. If the user moved a space to a different LED slot, the old ledIndex
 //      stored at insertion time would still drive the wrong LED.
 //
-// We use a classic read/write iterator pattern to filter and update the
-// vector in place — no temporary copy needed.
+// We copy the list out under the mutex, filter/update the copy lock-free,
+// then swap it back under the mutex — this keeps the lock held only for the
+// two short copy operations and never during getLEDforName() lookups.
 // --------------------------------------------------------------------------
 void WebClientHandler::synchronizeStatusListWithMapping(
         std::vector<SpaceStatusList>& spaceStatusList,
         DataSpaceList& spaceDirectory) {
-    auto writeIt = spaceStatusList.begin();
-    for (auto readIt = spaceStatusList.begin(); readIt != spaceStatusList.end(); ++readIt) {
+    // getLEDforName() reads the watch list (not the status list) — no lock needed here.
+    // Build a temporary filtered copy, then swap under lock to minimise lock duration.
+    std::vector<SpaceStatusList> filtered;
+    {
+        // Read current list under lock to avoid a race with /api/spacestatus.
+        if (spaceStatusMutex) xSemaphoreTake(spaceStatusMutex, portMAX_DELAY);
+        filtered = spaceStatusList;
+        if (spaceStatusMutex) xSemaphoreGive(spaceStatusMutex);
+    }
+
+    auto writeIt = filtered.begin();
+    for (auto readIt = filtered.begin(); readIt != filtered.end(); ++readIt) {
         int currentLed = spaceDirectory.getLEDforName(readIt->getName());
         if (currentLed < 0) continue;          // Name removed from watch list - drop entry.
         readIt->ledIndex = currentLed;         // Position may have changed - refresh it.
         if (writeIt != readIt) *writeIt = *readIt;
         ++writeIt;
     }
-    spaceStatusList.erase(writeIt, spaceStatusList.end());
+    filtered.erase(writeIt, filtered.end());
+
+    if (spaceStatusMutex) xSemaphoreTake(spaceStatusMutex, portMAX_DELAY);
+    spaceStatusList = std::move(filtered);
+    if (spaceStatusMutex) xSemaphoreGive(spaceStatusMutex);
 }
 
 // --------------------------------------------------------------------------
@@ -45,17 +64,24 @@ void WebClientHandler::synchronizeStatusListWithMapping(
 // --------------------------------------------------------------------------
 void WebClientHandler::updateOrInsertStatus(std::vector<SpaceStatusList>& spaceStatusList,
                                             int ledIndex, const String& name, SpaceStatus status) {
+    // Compute the timestamp before taking the lock (localTime() may block briefly).
+    String timestamp = TimeHandler::localTime("%Y.%m.%d %H:%M");
+
+    if (spaceStatusMutex) xSemaphoreTake(spaceStatusMutex, portMAX_DELAY);
+
     for (auto& entry : spaceStatusList) {
         if (entry.getName() != name) continue;
 
         if (entry.getStatus() != status) {
             entry.setStatus(status);
-            entry.setlastChange(TimeHandler::localTime("%Y.%m.%d %H:%M"));
+            entry.setlastChange(timestamp);
         }
+        if (spaceStatusMutex) xSemaphoreGive(spaceStatusMutex);
         return; // Found and (maybe) updated – done.
     }
     // Not in the list yet – add as a new entry.
-    spaceStatusList.push_back({ledIndex, name, status, TimeHandler::localTime("%Y.%m.%d %H:%M")});
+    spaceStatusList.push_back({ledIndex, name, status, timestamp});
+    if (spaceStatusMutex) xSemaphoreGive(spaceStatusMutex);
 }
 
 // --------------------------------------------------------------------------
@@ -160,9 +186,9 @@ void WebClientHandler::getSpaceStatus(std::vector<SpaceStatusList>& spaceStatusL
         JsonVariant openField = spaceDoc["data"]["state"]["open"];
         SpaceStatus status;
         if (openField.is<bool>()) {
-            status = openField.as<bool>() ? SpaceStatus::OPEN : SpaceStatus::CLOSED;
+            status = openField.as<bool>() ? SpaceStatus::open : SpaceStatus::closed;
         } else {
-            status = SpaceStatus::UNKNOWN;
+            status = SpaceStatus::unknown;
         }
 
         updateOrInsertStatus(spaceStatusList, ledIndex, spaceName, status);
