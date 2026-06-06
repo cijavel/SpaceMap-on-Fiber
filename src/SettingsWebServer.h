@@ -28,7 +28,11 @@ private:
     void operator=(const SettingsWebServer&) = delete;
 
     AsyncWebServer _server;
-    AsyncWebServer _httpsServer{443};
+    // NOTE: this listens on port 443 as *plain-text* HTTP, NOT HTTPS. It only
+    // serves a best-effort meta-refresh redirect for browsers that try
+    // https://<device-ip>. Real TLS clients fail the handshake before they
+    // ever reach a handler — that is expected for this LAN-only device.
+    AsyncWebServer _port443Redirect{443};
 
     // True while a /spacemap/blink task is active. Prevents concurrent blink
     // tasks from flooding the heap and the FreeRTOS task pool.

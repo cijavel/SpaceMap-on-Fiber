@@ -27,7 +27,7 @@ static const int defaultSearchListSize = sizeof(defaultSearchList) / sizeof(defa
 // --------------------------------------------------------------------------
 // Lazy-load: fill _list from NVS or fall back to the built-in default.
 // --------------------------------------------------------------------------
-void DataSpaceList::ensureLoaded() {
+void DataSpaceList::ensureLoadedLocked() {
     if (_loaded) return;
 
     std::unique_ptr<uint8_t[]> led     (new uint8_t[LED_SLOT_COUNT]);
@@ -68,35 +68,49 @@ void DataSpaceList::ensureLoaded() {
 // Returns the LED index for the hackerspace with the given name.
 // Returns -1 if the name is not found in the watch list.
 // --------------------------------------------------------------------------
-int DataSpaceList::getLEDforName(String name) {
-    ensureLoaded();
-    if (name.length() == 0) return -1;
-    for (const auto& entry : _list) {
-        if (entry.getName().length() == 0) continue; // empty slot = black LED, skip
-        if (entry.getName() == name) {
-            return entry.getLED();
+int DataSpaceList::getLEDforName(const String& name) {
+    if (_listMutex) xSemaphoreTake(_listMutex, portMAX_DELAY);
+    ensureLoadedLocked();
+    int result = -1;
+    if (name.length() != 0) {
+        for (const auto& entry : _list) {
+            if (entry.getName().length() == 0) continue; // empty slot = black LED, skip
+            if (entry.getName() == name) {
+                result = entry.getLED();
+                break;
+            }
         }
     }
-    return -1;
+    if (_listMutex) xSemaphoreGive(_listMutex);
+    return result;
 }
 
 int DataSpaceList::getNumberofSpacesonwatch() {
-    ensureLoaded();
+    if (_listMutex) xSemaphoreTake(_listMutex, portMAX_DELAY);
+    ensureLoadedLocked();
     int count = 0;
     for (const auto& entry : _list) {
         if (entry.getName().length() > 0) count++;
     }
+    if (_listMutex) xSemaphoreGive(_listMutex);
     return count;
 }
 
-const std::vector<SpaceSearchList>& DataSpaceList::getList() {
-    ensureLoaded();
-    return _list;
+std::vector<SpaceSearchList> DataSpaceList::getList() {
+    if (_listMutex) xSemaphoreTake(_listMutex, portMAX_DELAY);
+    ensureLoadedLocked();
+    std::vector<SpaceSearchList> copy = _list;   // snapshot under lock
+    if (_listMutex) xSemaphoreGive(_listMutex);
+    return copy;
 }
 
 void DataSpaceList::saveList(const std::vector<SpaceSearchList>& list) {
+    if (_listMutex) xSemaphoreTake(_listMutex, portMAX_DELAY);
     _list = list;
     _loaded = true;
+    if (_listMutex) xSemaphoreGive(_listMutex);
+    // Marshalling below reads the caller-owned 'list' parameter (not _list),
+    // so it needs no lock; NVS I/O stays out of the critical section.
     int count = (int)list.size();
     if (count > LED_SLOT_COUNT) count = LED_SLOT_COUNT;
     std::unique_ptr<uint8_t[]> led     (new uint8_t[count]);
@@ -113,25 +127,32 @@ void DataSpaceList::saveList(const std::vector<SpaceSearchList>& list) {
 }
 
 void DataSpaceList::resetToDefault() {
-    // Rebuild _list directly from the compiled-in default table.
-    _list.clear();
+    // Build the default list locally, then publish it under the lock.
+    std::vector<SpaceSearchList> defaults;
+    defaults.reserve(defaultSearchListSize);
     for (int i = 0; i < defaultSearchListSize; i++) {
-        _list.push_back(defaultSearchList[i]);
+        defaults.push_back(defaultSearchList[i]);
     }
+
+    if (_listMutex) xSemaphoreTake(_listMutex, portMAX_DELAY);
+    _list = defaults;
     _loaded = true;
+    if (_listMutex) xSemaphoreGive(_listMutex);
+
     // Clear NVS first so stale keys from a previously longer list cannot
     // survive, then write the defaults in a fresh open/close cycle.
+    // Marshalling reads the local 'defaults' copy — no lock needed.
     AppConfig::getInstance().resetSpaceMap();
-    int count = (int)_list.size();
+    int count = (int)defaults.size();
     std::unique_ptr<uint8_t[]> led     (new uint8_t[count]);
     std::unique_ptr<String[]>  name    (new String[count]);
     std::unique_ptr<String[]>  city    (new String[count]);
     std::unique_ptr<bool[]>    disabled(new bool[count]());
     for (int i = 0; i < count; i++) {
-        led[i]      = (uint8_t)_list[i].getLED();
-        name[i]     = _list[i].getName();
-        city[i]     = _list[i].city;
-        disabled[i] = _list[i].disabled;
+        led[i]      = (uint8_t)defaults[i].getLED();
+        name[i]     = defaults[i].getName();
+        city[i]     = defaults[i].city;
+        disabled[i] = defaults[i].disabled;
     }
     AppConfig::getInstance().saveSpaceMap(led.get(), name.get(), city.get(), disabled.get(), count);
 }

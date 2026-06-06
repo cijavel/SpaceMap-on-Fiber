@@ -1,10 +1,10 @@
 #include "TimeHandler.h"
 
-// NTP configuration.
-const char*   ntpServer         = "pool.ntp.org";
-const long    gmtOffsetSec      = 0;
-const int     daylightOffsetSec = 3600;
-const String  timezoneRule      = "CET-1CEST,M3.5.0,M10.5.0/3"; // POSIX timezone rule for Central Europe
+// NTP configuration (file-local — internal linkage).
+static constexpr const char* ntpServer         = "pool.ntp.org";
+static constexpr long        gmtOffsetSec      = 0;
+static constexpr int         daylightOffsetSec = 3600;
+static const String          timezoneRule      = "CET-1CEST,M3.5.0,M10.5.0/3"; // POSIX timezone rule for Central Europe
 
 // --------------------------------------------------------------------------
 // Initialise the system clock via NTP and apply the POSIX timezone rule.

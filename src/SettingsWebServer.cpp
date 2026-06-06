@@ -91,6 +91,12 @@ var originalMapping = {}; // snapshot of saved state, keyed by LED index
 var _savedTimer    = null;
 var _inSavedState  = false;
 
+// Escape user-supplied text before inserting it into innerHTML markup.
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+// Escape/unescape backslash and quote for the {n,"name","city"} export format.
+function escExport(s){return String(s).replace(/\\/g,'\\\\').replace(/"/g,'\\"');}
+function unesc(s){return String(s).replace(/\\(.)/g,'$1');}
+
 function showSavedState() {
     _inSavedState = true;
     var bar          = document.getElementById('unsavedBar');
@@ -187,8 +193,8 @@ function buildRow(i, name, city, disabled) {
         + '<td style="padding:4px;text-align:center"><input type="checkbox" class="dis-check" name="dis_'+i+'" aria-label="LED deaktivieren" title="LED deaktivieren (bleibt aus)" onchange="onDisabledChange(this)"'+(disabled?' checked':'')+''+'></td>'
         + '<td style="padding:4px;text-align:center"><button type="button" class="btn-blink" onclick="blinkLed(this)" aria-label="LED orten" style="background:#1a4a7a;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="LED orten">&#128294;</button></td>'
         + '<td style="padding:4px;text-align:center"><span class="space-status" aria-live="polite" style="display:inline-block;min-width:80px;font-size:0.82em;color:#888">&#8212;</span></td>'
-        + '<td style="padding:4px"><input type="text" name="name_'+i+'" value="'+name+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
-        + '<td style="padding:4px"><input type="text" name="city_'+i+'" value="'+city+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
+        + '<td style="padding:4px"><input type="text" name="name_'+i+'" value="'+escHtml(name)+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
+        + '<td style="padding:4px"><input type="text" name="city_'+i+'" value="'+escHtml(city)+'" placeholder="(leer)" style="width:100%;background:#1e1e1e;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:4px" oninput="onNameOrCityInput(this)"></td>'
         + '<td style="padding:4px;text-align:center"><button type="button" class="btn-clear" onclick="clearRow(this)" aria-label="Eintrag leeren" style="background:#3a1a1a;color:#e74c3c;border:none;border-radius:4px;padding:4px 8px;cursor:pointer" title="Eintrag leeren">&#10005;</button></td>'
         + '</tr>';
 }
@@ -239,18 +245,18 @@ function doDiscard() { location.reload(); }
 function doImport() {
     var raw = document.getElementById('importArea').value;
     // With position + optional disabled flag: { 2, "Name", "City"} or { 2, "Name", "City", 1}
-    var rePos = /\{\s*(\d+)\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"(?:\s*,\s*(\d+))?\s*\}/g;
+    var rePos = /\{\s*(\d+)\s*,\s*"((?:\\.|[^"\\])*)"\s*,\s*"((?:\\.|[^"\\])*)"(?:\s*,\s*(\d+))?\s*\}/g;
     // Without position + optional disabled flag: { "Name", "City"} or { "Name", "City", 1}
-    var reNoPos = /\{\s*"([^"]*)"\s*,\s*"([^"]*)"(?:\s*,\s*(\d+))?\s*\}/g;
+    var reNoPos = /\{\s*"((?:\\.|[^"\\])*)"\s*,\s*"((?:\\.|[^"\\])*)"(?:\s*,\s*(\d+))?\s*\}/g;
     var m;
     var withPos = {};
     while ((m = rePos.exec(raw)) !== null) {
-        withPos[parseInt(m[1], 10)] = { pos: parseInt(m[1], 10), name: m[2], city: m[3], disabled: m[4] === '1' };
+        withPos[parseInt(m[1], 10)] = { pos: parseInt(m[1], 10), name: unesc(m[2]), city: unesc(m[3]), disabled: m[4] === '1' };
     }
-    var stripped = raw.replace(/\{\s*\d+\s*,\s*"[^"]*"\s*,\s*"[^"]*"(?:\s*,\s*\d+)?\s*\}/g, '');
+    var stripped = raw.replace(/\{\s*\d+\s*,\s*"(?:\\.|[^"\\])*"\s*,\s*"(?:\\.|[^"\\])*"(?:\s*,\s*\d+)?\s*\}/g, '');
     var noPos = [];
     while ((m = reNoPos.exec(stripped)) !== null) {
-        noPos.push({ name: m[1], city: m[2], disabled: m[3] === '1' });
+        noPos.push({ name: unesc(m[1]), city: unesc(m[2]), disabled: m[3] === '1' });
     }
     if (Object.keys(withPos).length === 0 && noPos.length === 0) {
         alert('Keine Eintr\u00e4ge gefunden.\nErwartetes Format:\n{ 2, "MuCCC", "Munich"}\noder: { "MuCCC", "Munich"}');
@@ -352,7 +358,7 @@ function doExport() {
         var name     = textInputs.length > 0 ? textInputs[0].value : '';
         var city     = textInputs.length > 1 ? textInputs[1].value : '';
         var disabled = (disCb && disCb.checked) ? '1' : '0';
-        parts.push('{ ' + led + ', "' + name + '", "' + city + '", ' + disabled + '}');
+        parts.push('{ ' + led + ', "' + escExport(name) + '", "' + escExport(city) + '", ' + disabled + '}');
     });
     var blob = new Blob([parts.join(', ') + '\n'], { type: 'text/plain' });
     var a = document.createElement('a');
@@ -497,6 +503,8 @@ function reindexRows() {
 // JavaScript for / (index page).
 static const char INDEX_JS[] PROGMEM = R"rawjs(
 <script>
+// Escape text (API URL, space names from the external feed) before innerHTML.
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function checkApi() {
     fetch('/api/status')
         .then(function(r){ return r.json(); })
@@ -507,17 +515,17 @@ function checkApi() {
                 box.style.borderColor = '#555';
                 box.innerHTML = '<span style="font-size:1.1em">&#9711;</span>'
                     + ' <strong style="color:#aaa">No fetch yet</strong>'
-                    + '<br><small style="color:#777">API URL: ' + d.url + '</small>';
+                    + '<br><small style="color:#777">API URL: ' + escHtml(d.url) +'</small>';
             } else if (d.ok) {
                 box.style.borderColor = '#1a7a3c';
                 box.innerHTML = '<span style="font-size:1.1em">&#9679;</span>'
                     + ' <strong style="color:#2dbe60">SpaceMap API reachable</strong>' + age
-                    + '<br><small style="color:#777">HTTP ' + d.httpCode + ' &mdash; ' + d.url + '</small>';
+                    + '<br><small style="color:#777">HTTP ' + d.httpCode + ' &mdash; ' + escHtml(d.url) +'</small>';
             } else {
                 box.style.borderColor = '#c0392b';
                 box.innerHTML = '<span style="font-size:1.1em">&#9679;</span>'
                     + ' <strong style="color:#e74c3c">SpaceMap API unreachable</strong>' + age
-                    + '<br><small style="color:#777">HTTP ' + d.httpCode + ' &mdash; ' + d.url + '</small>';
+                    + '<br><small style="color:#777">HTTP ' + d.httpCode + ' &mdash; ' + escHtml(d.url) +'</small>';
             }
             var pbox = document.getElementById('parseStatus');
             if (d.httpCode === 0) { pbox.style.display = 'none'; return; }
@@ -554,7 +562,7 @@ function checkApi() {
                 pbox.innerHTML = '<span style="font-size:1.1em">&#9888;</span>'
                     + ' <strong style="color:#f5a800">' + d.foundCount + ' of ' + d.watchListSize + ' spaces found &mdash; '
                     + notFound + ' not in API response</strong>'
-                    + '<br><small style="color:#aaa">Not found: ' + d.unmatched.join(', ') + '</small>';
+                    + '<br><small style="color:#aaa">Not found: ' + escHtml(d.unmatched.join(', ')) + '</small>';
             }
         })
         .catch(function() {
@@ -583,13 +591,13 @@ void SettingsWebServer::begin() {
 // Register all URL routes on the async web server.
 // --------------------------------------------------------------------------
 void SettingsWebServer::registerRoutes() {
-    _httpsServer.on("/", HTTP_GET, [this](AsyncWebServerRequest* req) {
+    _port443Redirect.on("/", HTTP_GET, [this](AsyncWebServerRequest* req) {
         handleHttpsRedirect(req);
     });
-    _httpsServer.onNotFound([this](AsyncWebServerRequest* req) {
+    _port443Redirect.onNotFound([this](AsyncWebServerRequest* req) {
         handleHttpsRedirect(req);
     });
-    _httpsServer.begin();
+    _port443Redirect.begin();
 
     _server.on("/", HTTP_GET, [this](AsyncWebServerRequest* req) {
         handleIndex(req);
@@ -792,7 +800,9 @@ void SettingsWebServer::handleNotFound(AsyncWebServerRequest* request) {
 
 void SettingsWebServer::handleHttpsRedirect(AsyncWebServerRequest* request) {
     String ip  = WiFi.localIP().toString();
-    String url = request->url();
+    // Escape the request path before embedding it in HTML — it is fully
+    // attacker-controllable and would otherwise allow markup injection.
+    String url = htmlAttrEscape(request->url());
     String html = "<!DOCTYPE html><html><head>"
                   "<meta http-equiv='refresh' content='0;url=http://" + ip + url + "'>"
                   "</head><body>"
@@ -1196,6 +1206,16 @@ void SettingsWebServer::handleApiSpaceMapGet(AsyncWebServerRequest* request) {
     request->send(s);
 }
 
+// Escape backslash and double-quote so a name/city containing them survives a
+// round-trip through the { n, "name", "city"} export/import text format.
+// Must mirror the JS escExport()/unesc() pair in SPACEMAP_JS.
+static String exportEscape(const String& in) {
+    String out = in;
+    out.replace("\\", "\\\\");   // backslash first
+    out.replace("\"", "\\\"");   // then double-quote
+    return out;
+}
+
 // --------------------------------------------------------------------------
 // /spacemap/export  – GET
 // --------------------------------------------------------------------------
@@ -1217,9 +1237,9 @@ void SettingsWebServer::handleSpaceMapExport(AsyncWebServerRequest* request) {
             s->print("{ ");
             s->print(i);
             s->print(", \"");
-            s->print(byLed[i]->getName());
+            s->print(exportEscape(byLed[i]->getName()));
             s->print("\", \"");
-            s->print(byLed[i]->city);
+            s->print(exportEscape(byLed[i]->city));
             s->print("\"}");
         } else {
             s->print("{ ");

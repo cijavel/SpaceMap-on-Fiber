@@ -16,6 +16,16 @@
 #include "SettingsWebServer.h"
 
 #ifdef DEBUG
+    // enum class does not convert implicitly, so map it to text for logging.
+    static const char* statusName(SpaceStatus s) {
+        switch (s) {
+            case SpaceStatus::open:    return "open";
+            case SpaceStatus::closed:  return "closed";
+            case SpaceStatus::unknown: return "unknown";
+            default:                   return "init";
+        }
+    }
+
     static void PrintRamUsage() {
         Serial.print("Memory Usage: ");
         uint32_t freeHeap    = ESP.getFreeHeap();
@@ -35,9 +45,9 @@
             Serial.print(", name: ");
             Serial.print(entry.getName());
             Serial.print(", status: ");
-            Serial.print(String(entry.getStatus()));
+            Serial.print(statusName(entry.getStatus()));
             Serial.print(", last: ");
-            Serial.println(String(entry.getlastChange()));
+            Serial.println(entry.getlastChange());
         }
     }
 #endif

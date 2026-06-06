@@ -13,11 +13,11 @@ NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> strip(LED_SLOT_COUNT, LED_DATA_PIN)
 // Base color definitions for each hackerspace status.
 // Brightness is applied at runtime via scaleBrightness().
 // --------------------------------------------------------------------------
-RgbColor colorOpen   (0,   255,   0);   // green  - space is open
-RgbColor colorClosed (255,   0,   0);   // red    - space is closed
-RgbColor colorUnknown(24,   12, 128);   // blue   - status unavailable
-RgbColor colorWhite  (255, 255, 255);
-RgbColor colorOff    (0);               // LED off
+static const RgbColor colorOpen   (0,   255,   0);   // green  - space is open
+static const RgbColor colorClosed (255,   0,   0);   // red    - space is closed
+static const RgbColor colorUnknown(24,   12, 128);   // blue   - status unavailable
+static const RgbColor colorWhite  (255, 255, 255);
+static const RgbColor colorOff    (0);               // LED off
 
 // --------------------------------------------------------------------------
 // Init LEDs
